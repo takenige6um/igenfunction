@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ビリヤード</title>
+<script>
+var canvas, context, canvasRect;
+var width, height;
+var ball, balls = new Array();
+var speed = 0, angle = 0;
+var status = "ready";   // (ready/charge/shoot)
+
+// 玉クラス
+function Ball(x, y, color) {
+  this.x = x;
+  this.y = y;
+  this.v = 0;
+  this.angle = 0;
+  this.r = 10;           // 半径
+  this.color = color;
+  this.f = 0.01;         // 摩擦
+  this.status = "alive"; // (alive/dead)
+}
+
+Ball.prototype.move = function() {
+  if (this.status == "alive") {
+    // 摩擦
+    this.v -= this.f;
+    if (this.v < 0) this.v = 0;
+    // 移動
+    this.x += this.v * Math.cos(this.angle);
+    this.y += this.v * Math.sin(this.angle);
+    // ポケット
+    if (checkPocket(this.x, this.y, this.r*2)) this.status = "dead";
+    // 跳ね返り
+    if ((this.x < this.r)||(this.x > width - this.r)) {
+      this.angle = Math.PI - this.angle;
+      if (this.x < this.r) this.x = this.r;
+      if (this.x > width - this.r) this.x = width - this.r;
+    }
+    if ((this.y < this.r)||(this.y > height - this.r)) {
+      this.angle = Math.PI*2 - this.angle;
+      if (this.y < this.r) this.y = this.r;
+      if (this.y > height - this.r) this.y = height - this.r;
+    }
+  }
+}
+
+Ball.prototype.collide = function(target) {
+  if ((this.status == "alive")&&(target.status == "alive")) {
+    // 玉の衝突
+    var dx = target.x - this.x;
+    var dy = target.y - this.y;
+    var d = Math.sqrt(Math.pow((dx), 2)+Math.pow((dy), 2));
+    if (d < this.r*2) {
+      target.angle = Math.atan2(dy,dx);
+      this.v = (target.v + this.v)/2;
+      target.v = this.v;
+      this.angle = Math.PI - this.angle + target.angle * 2;
+      // 衝突直後の位置調整
+      this.move();
+      target.move();
+    }
+  }
+}
+
+Ball.prototype.draw = function() {
+  // 玉の描画
+  if (this.status == "alive") drawCircle(this.x, this.y, this.r, this.color)
+}
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("table");
+  context = canvas.getContext("2d");
+  width = canvas.width;
+  height = canvas.height;
+  // キャンバスの絶対座標を取得
+  canvasRect = canvas.getBoundingClientRect();
+  // 玉の生成
+  ball = new Ball(width/4, height/2, "#FFFFFF");
+  balls[0] = new Ball(width/4*3, height/2, "#FFFF00");
+  balls[1] = new Ball(width/16*13, height/16*7, "#0000FF");
+  balls[2] = new Ball(width/16*13, height/16*9, "#FF0000");
+  // スタート
+  setInterval(main, 20);
+}
+
+function drawCircle(x, y, r, color) {
+  // 塗りつぶし円の描画
+  context.fillStyle = color;
+  context.beginPath();
+  context.arc(x, y, r, 0, Math.PI*2);
+  context.fill();
+}
+
+function main() {
+  // 移動
+  ball.move();
+  for (var i=0; i<balls.length; i++) {
+    balls[i].move();
+    // 手球と衝突
+    ball.collide(balls[i]);
+    // 玉同士の衝突
+    for (var j=0; j<balls.length; j++) {
+      if (i != j) balls[i].collide(balls[j]);
+    }
+  }
+  // 発射速度アップ
+  if (status == "charge") speed += 0.2;
+  if (speed > 20) speed = 20;
+  // 発射準備チェック
+  if ((status != "charge")&&(checkReady())) status = "ready";
+
+  // キャンバスのクリア
+  context.clearRect(0, 0, width, height);
+  // ポケットの描画
+  drawCircle(0, 0, 20, "#000000");
+  drawCircle(width, 0, 20, "#000000");
+  drawCircle(width, height, 20, "#000000");
+  drawCircle(0, height, 20, "#000000");
+  // 玉の描画
+  ball.draw();
+  for (var i=0; i<balls.length; i++) balls[i].draw();
+  // 発射方向の描画
+  var x = ball.x + speed * width/20 * Math.cos(angle);
+  var y = ball.y + speed * width/20 * Math.sin(angle);
+  context.strokeStyle = "#FFCCCC";
+  context.beginPath();
+  context.moveTo(ball.x, ball.y);
+  context.lineTo(x, y);
+  context.stroke();
+}
+
+function charge(event) {
+  // チャージ開始
+  if (status == "ready") status = "charge";
+}
+
+function shoot(event) {
+  if (status == "charge") {
+    // 発射角度のセット
+    setAngle(event);
+    // 発射
+    ball.v = speed;
+    ball.angle = angle;
+    // 発射終了
+    status = "shoot";
+    speed = 0;
+  }
+}
+
+function setAngle(event) {
+  // マウスカーソルの位置と手玉の角度
+  var dx = (event.clientX - canvasRect.left) - ball.x;
+  var dy = (event.clientY - canvasRect.top) - ball.y;
+  angle = Math.atan2(dy, dx);
+}
+
+function cancelShoot(event) {
+  // 発射キャンセル
+  if (status == "charge") {
+    status = "ready";
+    speed = 0;
+  }
+}
+
+function checkReady() {
+  // すべての玉が止まっているかどうか
+  var check = true;
+  if ((ball.status == "alive")&&(ball.v > 0)) check = false;
+  for (var i=0; i<balls.length; i++) {
+    if ((balls[i].status == "alive")&&(balls[i].v > 0)) check = false;
+  }
+  return check;
+}
+
+function checkPocket(x, y, r) {
+  // ポケットに入ったかどうか
+  var check = false;
+  if (Math.sqrt(Math.pow((0-x), 2)+Math.pow((0-y), 2)) < r) check = true;
+  if (Math.sqrt(Math.pow((width-x), 2)+Math.pow((0-y), 2)) < r) check = true;
+  if (Math.sqrt(Math.pow((width-x), 2)+Math.pow((height-y), 2)) < r) check = true;
+  if (Math.sqrt(Math.pow((0-x), 2)+Math.pow((height-y), 2)) < r) check = true;
+  return check;
+}
+</script>
+</head>
+<body onload="init()">
+<p>ビリヤード</p>
+<hr/>
+<canvas id="table" width="580" height="320" style="background: #009900;"
+onmousedown="charge(event)" onmouseup="shoot(event)"
+onmousemove="setAngle(event)" onmouseleave="cancelShoot(event)">
+Canvas not supported ...
+</canvas>
+</body>
+</html>

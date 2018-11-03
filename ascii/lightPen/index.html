@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ライトペン</title>
+<script>
+  var canvas, context, canvasRect;  // キャンバス
+  var image = new Image();        // 画像
+  var mouseDown;
+  var sx, sy, r, blur, hue;       // 始点、ペンの太さ、ブラー、色
+
+  function init() {
+    // キャンバスの取得
+    canvas = document.getElementById("lightCanvas");
+    context = canvas.getContext("2d");
+    // キャンバスの絶対座標を取得
+    canvasRect = canvas.getBoundingClientRect();
+    // ペンの初期化
+    setPen();
+  }
+
+  function loadImage(e) {
+    // 画像の読み込み
+    image.src = URL.createObjectURL(e.files[0]);
+    image.onload = function() {
+      // 描画
+      drawImage();
+    };
+  }
+
+  function drawImage() {
+    // キャンバスをクリア
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.shadowBlur = 0;
+
+    // キャンバスにあわせて画像を描画
+    var dx, dy, dw, dh;
+    if (image.width > image.height) {
+      // 横長画像
+      dw = canvas.width;
+      dh = dw * image.height/image.width;
+      dx = 0;
+      dy = (canvas.height-dh)/2;
+    } else {
+      // 縦長画像
+      dw = canvas.height * image.width/image.height;
+      dh = canvas.height;
+      dx = (canvas.width-dw)/2;
+      dy = 0;
+    }
+    context.drawImage(image, 0, 0, image.width, image.height, dx, dy, dw, dh);
+  }
+
+  function drawLine(x1, y1, x2, y2, r, hue) {
+    // 線の描画
+    context.strokeStyle = "hsl("+hue+", 100%, 80%)";
+    context.lineWidth = r;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+  }
+
+  function drawCircle(x, y, r, hue) {
+    // グラデーション
+    var grad = context.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, "hsla("+hue+", 100%, 80%, 1.0)");
+    grad.addColorStop(0.3, "hsla("+hue+", 100%, 80%, 0.6)");
+    grad.addColorStop(0.6, "hsla("+hue+", 100%, 80%, 0.3)");
+    grad.addColorStop(1, "hsla("+hue+", 100%, 80%, 0.0)");
+
+    // 円の描画
+    context.fillStyle = grad;
+    context.beginPath();
+    context.arc(x, y, r, 0, 2*Math.PI);
+    context.fill();
+  }
+
+  function draw(x, y) {
+    // ペンの色（ランダム）
+    if (document.getElementById("random").checked) {
+      hue = Math.floor(Math.random()*360);
+    }
+
+    // カラー値加算,ブラーのセット
+    context.globalCompositeOperation = "lighter";
+    context.shadowColor = "hsl("+hue+", 100%, 50%)";
+    context.shadowBlur = blur;
+
+    // 描画
+    drawLine(sx, sy, x, y, r, hue);
+    drawCircle(x, y, r, hue);
+  }
+
+  function startDraw(event) {
+    // マウスボタンが押された
+    mouseDown = true;
+    // 始点
+    sx = event.clientX - canvasRect.left;
+    sy = event.clientY - canvasRect.top;
+    if (document.getElementById("pen1").checked) draw(sx, sy);
+  }
+
+  function onDraw(event) {
+    // フリーハンド描画
+    if ((mouseDown) && (document.getElementById("pen0").checked)) {
+      // マウスの位置
+      var x = event.clientX - canvasRect.left;
+      var y = event.clientY - canvasRect.top;
+      // 描画
+      draw(x, y);
+      // 始点を保存
+      sx = x;
+      sy = y;
+    }
+  }
+
+  function endDraw(event) {
+    // 直線描画
+    if ((mouseDown) && (document.getElementById("pen1").checked)) {
+      // マウスの位置
+      var x = event.clientX - canvasRect.left;
+      var y = event.clientY - canvasRect.top;
+      // 描画
+      draw(x, y);
+    }
+    // マウスボタンが放された
+    mouseDown = false;
+  }
+
+  function setPen() {
+    // ぺんの太さ、ブラーをセット
+    r = document.getElementById("width").value;
+    blur = document.getElementById("blur").value;
+    if (document.getElementById("linkWidth").checked) {
+      blur = r*10;
+      document.getElementById("blur").value = blur;
+    }
+
+    // ぺんの色をセット
+    hue = document.getElementById("color").value;
+    document.getElementById("colorText").style.color = "hsl("+hue+", 100%, 50%)";
+  }
+</script>
+<style>
+  canvas {
+    background-color: #000000;
+    border: solid thin #CCCCCC;
+  }
+</style>
+</head>
+<body onload="init()">
+<p>ライトペン</p>
+画像ファイル :
+<input type="file" accept="image/jpeg. image/png" onchange="loadImage(this)">
+<input type="button" value="画面クリア" onclick="drawImage()">
+<hr>
+<form onchange="setPen()">
+ペンの種類 :
+<input name="pen" type="radio" id="pen0" checked>フリーハンド
+<input name="pen" type="radio" id="pen1">直線<br>
+ペンの太さ : <input type="range" id="width" value="10" min="1" max="50">
+ブラー : <input type="range" id="blur" value="100" min="1" max="500">
+<input type="checkbox" id="linkWidth" checked>ペンの太さと連動<br>
+ペンの色<span id="colorText"></span>
+<input type="range" id="color" value="100" min="0" max="360">
+<input type="checkbox" id="random">ランダム
+</form>
+<hr>
+<canvas id="lightCanvas" width="640" height="640"
+        onmousedown="startDraw(event)" onmousemove="onDraw(event)"
+        onmouseup="endDraw(event)" onmouseleave="endDraw(event)">
+</canvas>
+</body>
+</html>

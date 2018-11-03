@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>モザイク</title>
+<script>
+  var canvas, context, canvasRect;
+  var selectCanvas, selectContext;
+  var image = new Image();
+  var startX, startY, endX, endY;
+  var mouseDown = false;
+
+  function init() {
+    canvas = document.getElementById("image");
+    context = canvas.getContext("2d");
+    selectCanvas = document.getElementById("select");
+    selectContext = selectCanvas.getContext("2d");
+
+    // キャンバスの絶対座標を取得
+    canvasRect = canvas.getBoundingClientRect();
+  }
+
+  function loadImage(e) {
+    // 画像の読み込み
+    image.src = URL.createObjectURL(e.files[0]);
+    image.onload = function() {
+      drawImage();
+    };
+  }
+
+  function drawImage() {
+    // キャンバスをクリア
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    // キャンバスにあわせて画像を描画
+    var dx, dy, dw, dh;
+    if (image.width > image.height) {
+      // 横長画像
+      dw = canvas.width;
+      dh = dw * image.height/image.width;
+      dx = 0;
+      dy = (canvas.height-dh)/2;
+    } else {
+      // 縦長画像
+      dw = canvas.heigt * image.width/image.height;
+      dh = canvas.height;
+      dx = (canvas.width-dw)/2;
+      dy = 0;
+    }
+    context.drawImage(image, 0, 0, image.width, image.height, dx, dy, dw, dh);
+  }
+
+  function startSelect(event) {
+    // マウスボタンが押された
+    mouseDown = true;
+
+    // 選択をクリア
+    clearSelect();
+
+    // 始点をセット
+    startX = event.clientX - canvasRect.left;
+    startY = event.clientY - canvasRect.top;
+  }
+
+  function drawSelect(event) {
+    // マウスボタンが押されている時選択範囲を描画
+    if (mouseDown) {
+      // 終点をセット
+      endX = event.clientX - canvasRect.left;
+      endY = event.clientY - canvasRect.top;
+
+      // 選択範囲（四角形）を描画
+      selectContext.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
+      selectContext.strokeStyle = "blue";
+      selectContext.beginPath();
+      selectContext.strokeRect(startX, startY, endX-startX, endY-startY);
+    }
+  }
+
+  function endSelect(event) {
+    //マウスボタンが放された
+    mouseDown = false;
+  }
+
+  function mosaic() {
+    // モザイクの大きさを取得
+    var size = Number(document.getElementById("size").value);
+
+    // 選択範囲を変換
+    var sx = Math.floor(startX/size)*size;
+    var sy = Math.floor(startY/size)*size;
+    var ex = Math.ceil(endX/size)*size;
+    var ey = Math.ceil(endY/size)*size;
+    if (startX > endX) {
+      sx = Math.floor(endX/size)*size;
+      ex = Math.ceil(startX/size)*size;
+    }
+    if (startY > endY) {
+      sy = Math.floor(endY/size)*size;
+      ey = Math.ceil(startY/size)*size;
+    }
+
+    // モザイク処理
+    for (var y=sy; y<ey; y+=size) {
+      for (var x=sx; x<ex; x+=size) {
+        var iData = context.getImageData(x, y, size, size);
+        var r = 0, g = 0, b = 0;
+        for (var i=0; i<size*size; i+=4) {
+          r += iData.data[i];
+          g += iData.data[i+1];
+          b += iData.data[i+2];
+        }
+        r = Math.floor(r / (size*size/4));
+        g = Math.floor(g / (size*size/4));
+        b = Math.floor(b / (size*size/4));
+        context.fillStyle = "rgb("+r+", "+g+", "+b+")";
+        context.beginPath();
+        context.fillRect(x, y, size, size);
+      }
+    }
+
+    // 選択をクリア
+    clearSelect();
+  }
+
+  function clearSelect() {
+    // 選択をクリア
+    selectContext.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
+    endX = startX;
+    endY = startY;
+  }
+
+  function resetImage() {
+    // 画像を描画
+    drawImage();
+    // 選択をクリア
+    clearSelect();
+  }
+
+  function saveImage() {
+    // 画像を名前をつけて保存（ダウンロード）
+    var filename = window.prompt("ファイル名を入力してください", "image.png");
+    if (filename != null) {
+      if (canvas.msToBlob) {
+        // msToBlobを使用できるブラウザ
+        var blob = canvas.msToBlob();
+        window.navigator.msSaveBlob(blob, filename);
+      } else {
+        // それ以外のブラウザー
+        var a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    }
+  }
+</script>
+<style>
+  div {position: relative;}
+  #image {background-color: #000000;}
+  #select {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+  }
+</style>
+</head>
+<body onload="init()">
+<p>モザイク</p>
+画像ファイルを選択：
+<input type="file" accept="image/*" onChange="loadImage(this)">
+サイズ：<input type="number" id="size" value="10" min="10" max="50">
+<input type="button" value="モザイク" onClick="mosaic()">
+<input type="button" value="元の画像に戻す" onClick="resetImage()">
+<input type="button" value="画像を保存する" onClick="saveImage()">
+<hr/>
+<div>
+<canvas id="image" width="800" height="600">
+Canvas not supported ...
+</canvas>
+<canvas id="select" width="800" height="600" onMouseDown="startSelect(event)"
+ onMouseMove="drawSelect(event)" onMouseUp="endSelect(event)">
+Canvas not supported ...
+</canvas>
+</div>
+</body>
+</html>

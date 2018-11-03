@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>蚊取り線香タイマー</title>
+<script>
+  var canvas, context;
+  var startTime;
+  var timer = null;
+  var status = "ready";   // (ready/start)
+
+  function init() {
+    canvas = document.getElementById("timer");
+    context = canvas.getContext("2d");
+    // STOPボタンの無効化
+    document.getElementById("stop").disabled = true;
+    draw();
+  }
+
+  function drawCoil(startAngle, endAngle, n, color) {
+    // 半径、中心座標
+    var r = 300, cx = 320, cy = 320;
+    // 間隔
+    var d = r / (360*n);
+    // 描画
+    context.strokeStyle = color;
+    context.beginPath();
+    for (var i=startAngle; i<=endAngle; i++) {
+      var rad = i * Math.PI/180;
+      var x = cx + Math.cos(rad) * d * i;
+      var y = cx + Math.sin(rad) * d * i;
+      if (i == startAngle) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    }
+    context.stroke();
+  }
+
+  function draw() {
+    // 設定時間（分）の取得
+    var n = document.getElementById("time").value;
+    // 残り時間（秒）
+    var time = 60*n;
+    if (status == "start") time = 60*n - (Date.now()-startTime)/1000;
+    // 角度に変換（60秒->360度）
+    var angle = Math.floor(time * 6);
+
+    // 蚊取り線香の描画
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.lineWidth = 20;
+    drawCoil(0, angle, n, "#006600");
+    // 火の描画
+    if (angle > 1)drawCoil(angle-1, angle, n, "#FF6600");
+    // 灰の描画
+    drawCoil(angle, 360*n, n, "#CCCCCC");
+
+    // 残り時間の表示
+    var mm = Math.floor(time/60);
+    var ss = time - mm*60;
+    mm = ("00"+mm).slice(-2);
+    ss = ("000000"+ss.toFixed(3)).slice(-6);
+    /* ss = ("00"+ss.toFixed(3)).slice(-6); */
+    /* ss = ("000000"+ss).slice(-6); */
+    /* mm = "00"+mm;
+     * ss = "000000"+ss; */
+    var mmss = mm +":"+ ss;
+    if (time < 0) {
+      // タイマー停止
+      mmss = "<font color='#FF0000'>00:00.000</font>";
+      stopTimer();
+    }
+    document.getElementById("remaining").innerHTML = mmss;
+  }
+
+  function startTimer() {
+    // タイマーの開始
+    startTime = Date.now();
+    status = "start";
+    document.getElementById("start").disabled = true;
+    document.getElementById("stop").disabled = false;
+    timer = setInterval(draw, 10);
+  }
+
+  function stopTimer() {
+    // タイマーの停止
+    clearInterval(timer);
+    status = "ready";
+    document.getElementById("start").disabled = false;
+    document.getElementById("stop").disabled = true;
+  }
+
+  function setTimer() {
+    // タイマーのセット
+    stopTimer();
+    startTime = Date.now();
+    draw();
+  }
+</script>
+</head>
+<body onload="init()">
+<p>蚊取り線香タイマー</p>
+<input type="number" id="time" value="5" min="1" max="10" onchange="setTimer()">分
+<input type="button" id="start" value="START" onclick="startTimer()">
+<input type="button" id="stop" value="STOP" onclick="stopTimer()">
+<span id="remaining"></span>
+<hr>
+<canvas id="timer" width="640" height="640">
+Canvas not supported ...
+</canvas>
+</body>
+</html>

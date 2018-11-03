@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ロゴメーカー</title>
+<script>
+var canvas, context;
+// フォント
+var fonts = ["arial", "Candara", "Comic Sans MS", "Courier New",
+             "Estrangelo Edessa", "Gabriola", "Georgia", "Impact",
+             "Lucida Console", "Segoe Print", "Times New Roman",
+             "Verdana"];
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("logo");
+  context = canvas.getContext("2d");
+
+  //フォントのセット
+  var select = document.getElementById("font");
+  for (var i=0; i<fonts.length; i++) {
+    var option = document.createElement("option");
+    option.value = fonts[i];
+    option.innerText = fonts[i];
+    select.appendChild(option);
+  }
+
+  // 初期描画
+  draw();
+}
+
+function draw() {
+  // ロゴテキストの取得
+  var text = document.getElementById("logoText").value;
+
+  // フォントの取得
+  var select = document.getElementById("font");
+  var font = select.options[select.selectedIndex].value;
+  var style = "";
+  if (document.getElementById("italic").checked) style += "italic ";
+  if (document.getElementById("bold").checked) style += "bold ";
+  var fontColor = document.getElementById("fontColor").value;
+
+  // 装飾の取得
+  var deco;
+  for (var i=0; i<4; i++) {
+    if (document.getElementById("deco_"+i).checked) deco = i;
+  }
+  var decoColor = document.getElementById("decoColor").value;
+
+  // フレームの取得
+  var frame;
+  for (var i=0; i<4; i++) {
+    if (document.getElementById("frame_"+i).checked) frame = i;
+  }
+  var frameColor = document.getElementById("frameColor").value;
+
+  // キャンバスのクリア
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 影をリセット
+  context.shadowBlur = 0;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
+
+  // フォントをセット
+  context.font = style + "60px '"+font+"'";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+
+  // 描画位置
+  var x = canvas.width/2;
+  var y = canvas.height/2;
+
+  // フレームの描画
+  var size = context.measureText(text);
+  var w = Math.round(size.width);
+  var h = 120;
+  context.fillStyle = frameColor;
+  if (frame == 1) {
+    // 長方形
+    context.fillRect(x-w/2-h/2, y-h/2, w+h, h);
+  } else if (frame == 2) {
+    // 角丸
+    var r = h/4;
+    context.beginPath();
+    context.moveTo(x-w/2-h/2+r, y-h/2);
+    context.arcTo(x+w/2+h/2, y-h/2, x+w/2+h/2, y+h/2, r);
+    context.arcTo(x+w/2+h/2, y+h/2, x-w/2+h/2, y+h/2, r);
+    context.arcTo(x-w/2-h/2, y+h/2, x-w/2-h/2, y-h/2, r);
+    context.arcTo(x-w/2-h/2, y-h/2, x-w/2-h/2+r, y-h/2, r);
+    context.fill();
+  } else if (frame == 3) {
+    // 長円形
+    context.beginPath();
+    context.moveTo(x-w/2, y-h/2);
+    context.lineTo(x+w/2, y-h/2);
+    context.arc(x+w/2, y, h/2, -Math.PI/2, Math.PI/2);
+    context.lineTo(x-w/2, y+h/2);
+    context.arc(x-w/2, y, h/2, Math.PI/2, Math.PI*3/2);
+    context.fill();
+  }
+
+  // 装飾
+  context.fillStyle = decoColor;
+  if (deco == 1) {
+    // 縁取り
+    for (var i=-1; i<2; i++) {
+      for (var j=-1; j<2; j++) {
+        context.fillText(text, x+2*i, y+2*j);
+      }
+    }
+  } else if (deco == 2) {
+    // 影
+    context.shadowColor = decoColor;
+    context.shadowBlur = 5;
+    context.shadowOffsetX = 5;
+    context.shadowOffsetY = 5;
+  } else if (deco == 3) {
+    // 立体
+    for (var i=1; i<5; i++) {
+      context.fillText(text, x+i, y+i);
+    }
+  }
+
+  // ロゴの描画
+  context.fillStyle = fontColor;
+  context.fillText(text, x, y);
+}
+
+function saveLogo() {
+  // 画像を名前をつけて保存（ダウンロード）
+  var filename = window.prompt("ファイル名を入力してください", "logo.png");
+  if (filename != null) {
+    if (canvas.msToBlob) {
+      // msToBlobを使用できるブラウザ
+      var blob = canvas.msToBlob();
+      window.navigator.msSaveBlob(blob, filename);
+    } else {
+      // それ以外のブラウザ
+      var a = document.createElement('a');
+      a.href = canvas.toDataURL("image/png");
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+</script>
+<style>
+canvas {border: solid thin #CCCCCC;}
+</style>
+</head>
+<body onload="init()">
+<p>ロゴメーカー</p>
+<hr>
+<form onchange="draw()" onsubmit="return false;">
+テキスト：<input type="text" id="logoText" value="Baby Metal">
+<br>
+フォント：<select id="font"></select>
+<input type="checkbox" id="italic">イタリック
+<input type="checkbox" id="bold">ボールド
+<input type="color" id="fontColor" value="#0080FF">
+<hr>
+装飾：
+<input type="radio" name="decoration" id="deco_0" checked>なし
+<input type="radio" name="decoration" id="deco_1">縁取り
+<input type="radio" name="decoration" id="deco_2">影
+<input type="radio" name="decoration" id="deco_3">立体
+<input type="color" id="decoColor" value="#004080">
+<hr>
+フレーム：
+<input type="radio" name="frame" id="frame_0" checked>なし
+<input type="radio" name="frame" id="frame_1">長方形
+<input type="radio" name="frame" id="frame_2">角丸
+<input type="radio" name="frame" id="frame_3">長円形
+<input type="color" id="frameColor" value="#004040">
+<hr>
+</form>
+<canvas id="logo" width="640" height="200">
+Canvas not supported ...
+</canvas><br>
+<input type="button" value="ロゴを保存" onclick="saveLogo()">
+</body>
+</html>

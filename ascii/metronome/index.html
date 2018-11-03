@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>メトロノーム</title>
+<script>
+var audioContext = new AudioContext();
+var canvas, context;
+var index, startTime;
+var timer = null;
+var noiseBuffer;
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("metronome");
+  context = canvas.getContext("2d");
+
+  // ノイズバッファの作成
+  createNoiseBuffer();
+
+  // 4拍子の描画
+  draw(4);
+}
+
+function startMetronome() {
+  // 一拍目
+  index = 0;
+  noise();
+  sound();
+  // メトロノームスタート
+  startTime = audioContext.currentTime;
+  if (timer == null) timer = setInterval(metronome, 10);
+}
+
+function stopMetronome() {
+  // メトロノームストップ
+  clearInterval(timer);
+  timer = null;
+  index = -1;
+}
+
+function metronome() {
+  // テンポの取得
+  var tempo = document.getElementById("tempo").value;
+
+  // 拍子の取得
+  var beat = 4;
+  if (document.getElementById("beat_2").checked) beat = 2;
+  if (document.getElementById("beat_3").checked) beat = 3;
+  if (document.getElementById("beat_5").checked) beat = 5;
+  if (document.getElementById("beat_6").checked) beat = 6;
+
+  // 音を鳴らす
+  if (audioContext.currentTime - startTime >= 60/tempo) {
+    startTime = audioContext.currentTime;
+    index++;
+    noise();
+    if (index >= beat) {
+      // 一拍目
+      index = 0;
+      sound();
+    }
+  }
+
+  // 描画
+  draw(beat);
+}
+
+function sound() {
+  // 音の作成 (周波数 : 440x3)
+  var oscillator = audioContext.createOscillator();
+  oscillator.frequency.setValueAtTime(440*3, audioContext.currentTime);
+  
+  // エンベロープ (ボリューム : 1->0, 1->0.01)
+  var envelope = audioContext.createGain();
+  envelope.gain.setValueAtTime(1, audioContext.currentTime);
+  envelope.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 0.05);
+  envelope.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+  // 接続
+  oscillator.connect(envelope);
+  envelope.connect(audioContext.destination);
+
+  // 再生 (0.3秒)
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime+0.3);
+}
+
+function createNoiseBuffer() {
+  // ノイズバッファの作成
+  var length = audioContext.sampleRate;
+  noiseBuffer = audioContext.createBuffer(1, length, length);
+  var noiseBufferOutput = noiseBuffer.getChannelData(0);
+  for (var i=0; i<length; i++) {
+    noiseBufferOutput[i] = Math.random() * 2 - 1;
+  }
+}
+
+function noise() {
+  // ノイズの作成
+  var noise = audioContext.createBufferSource();
+  noise.buffer = noiseBuffer;
+
+  // エンベロープ (ボリューム : 1->0, 1->0.01)
+  var envelope = audioContext.createGain();
+  envelope.gain.setValueAtTime(1, audioContext.currentTime);
+  envelope.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+  envelope.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.02);
+
+  // 接続
+  noise.connect(envelope);
+  envelope.connect(audioContext.destination);
+
+  // 再生 (0.1秒)
+  noise.start(audioContext.currentTime);
+  noise.stop(audioContext.currentTime + 0.1);
+}
+
+function draw(beat) {
+  // キャンバスのクリア
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 中心円の描画
+  if (index == 0) {
+    context.fillStyle = "#FF66CC";
+  } else {
+    context.fillStyle = "#99CCCC";
+  }
+  
+  context.beginPath();
+  context.arc(300, 300, 60, 0, Math.PI*2);
+  context.fill();
+
+  // 外円の描画
+  context.lineWidth = 15;
+  for (var i=1; i<beat; i++) {
+    if (index == i) {
+      context.strokeStyle = "#FF66CC"
+    } else {
+      context.strokeStyle = "#99CCCC"
+    }
+    context.beginPath();
+    context.arc(300, 300, 60+30*(8/beat)*i, 0, Math.PI*2);
+    context.stroke();
+  }
+}
+</script>
+<style>
+#tempo {
+  width: 60px;}
+canvas {
+  background-color: #000000;}
+</style>
+</head>
+<body onload="init()">
+<p>メトロノーム</p>
+<hr>
+テンポ : <input type="number" id="tempo" value="60" min="30" max="250">
+<input type="radio" id="beat_2" name="beat" onchange="draw(2)">2拍子
+<input type="radio" id="beat_3" name="beat" onchange="draw(3)">3拍子
+<input type="radio" id="beat_4" name="beat" onchange="draw(4)" checked>4拍子
+<input type="radio" id="beat_5" name="beat" onchange="draw(5)">5拍子
+<input type="radio" id="beat_6" name="beat" onchange="draw(6)">6拍子
+<input type="button" id="start" value="START" onclick="startMetronome()">
+<input type="button" id="stop" value="STOP" onclick="stopMetronome()">
+<hr>
+<canvas id="metronome" width="600" height="600">
+Canvas not supported ...
+</canvas>
+</body>
+</html>

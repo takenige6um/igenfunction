@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>電話帳</title>
+<script>
+var phonebook = new Array();
+
+function loadJSON(e) {
+  // JSONデータの読み込み
+  var reader = new FileReader();
+  // 読み込み完了後の処理
+  reader.onload = function() {
+    // テキストデータをJSONデータに変換
+    phonebook = JSON.parse(reader.result);
+    // 電話帳を表示
+    listPhone();
+  };
+  // テキストファイルとして読み込み実行
+  reader.readAsText(e.files[0]);
+}
+
+function listPhone(index) {
+  // 電話帳一覧のヘッダー
+  var header = "<tr class='header'><td>名前</td><td>電話番号</td>";
+  header += "<td>修正/削除</td></tr>";
+
+  // 表の作成
+  var table = document.getElementById("list");
+  table.innerHTML = header;
+  for (i=0; i<phonebook.length; i++) {
+    // trの作成
+    var tr = document.createElement("tr");
+    // tdの作成
+    var name = document.createElement("td");
+    var tel = document.createElement("td");
+    var operation = document.createElement("td");
+    // 修正フォームあり/なし
+    if (i == index) {
+      // テキストボックス（名前）
+      var inputName = document.createElement("input");
+      inputName.id = "mod_name";
+      inputName.type = "text";
+      inputName.value = phonebook[i].name;
+      name.appendChild(inputName);
+      // テキストボックス（電話番号）
+      var inputTel = document.createElement("input");
+      inputTel.id = "mod_tel";
+      inputTel.type = "text";
+      inputTel.value = phonebook[i].tel;
+      tel.appendChild(inputTel);
+      // 修正ボタン
+      var setButton = document.createElement("input");
+      setButton.id = "phone_"+i;
+      setButton.type = "button";
+      setButton.value = "修正";
+      setButton.onclick = setPhone;
+      operation.appendChild(setButton);
+      // 修正キャンセルボタン
+      var cancelButton = document.createElement("input");
+      cancelButton.id = "phone_"+i;
+      cancelButton.type = "button";
+      cancelButton.value = "キャンセル";
+      cancelButton.onclick = listPhone;
+      operation.appendChild(cancelButton);
+    } else {
+      // 名前、電話番号
+      name.innerText = phonebook[i].name;
+      tel.innerText = phonebook[i].tel;
+      // 修正ボタン
+      var modifyButton = document.createElement("input");
+      modifyButton.id = "phone_"+i;
+      modifyButton.type = "button";
+      modifyButton.value = "修正";
+      modifyButton.onclick = modifyPhone;
+      operation.appendChild(modifyButton);
+      // 削除ボタン
+      var deleteButton = document.createElement("input");
+      deleteButton.id = "phone_"+i;
+      deleteButton.type = "button";
+      deleteButton.value = "削除";
+      deleteButton.onclick = deletePhone;
+      operation.appendChild(deleteButton);
+    }
+
+    // trに追加
+    tr.appendChild(name);
+    tr.appendChild(tel);
+    tr.appendChild(operation);
+    // tableに追加
+    table.appendChild(tr);
+  }
+}
+
+function addPhone() {
+  // 電話帳データの追加
+  var name = document.getElementById("name").value;
+  var tel = document.getElementById("tel").value;
+  if (name == "") {
+    window.alert("名前を入力してください。");
+  } else if (tel == "") {
+    window.alert("電話番号を入力してください。");
+  } else {
+    phonebook.push({"name":name, "tel":tel});
+    listPhone();
+  }
+}
+
+function modifyPhone(e) {
+  // 修正する電話帳データのインデックスを取得
+  var index = e.target.id.split("_")[1];
+  // 電話帳（修正フォームあり）を表示
+  listPhone(index);
+}
+
+function setPhone(e) {
+  // 修正する電話帳データのインデックスを取得
+  var index = e.target.id.split("_")[1];
+  // 電話帳データを修正
+  var name = document.getElementById("mod_name").value;
+  var tel = document.getElementById("mod_tel").value;
+  if (name == "") {
+    window.alert("名前を入力してください。");
+  } else if (tel == "") {
+    window.alert("電話番号を入力してください。");
+  } else {
+    phonebook[index] = {"name":name, "tel":tel};
+    listPhone();
+  }
+}
+
+function deletePhone(e) {
+  // 削除する電話帳データのインデックスを取得
+  var index = e.target.id.split("_")[1];
+  // 電話帳データを削除
+  if (window.confirm("削除しますか？")) {
+    phonebook.splice(index, 1);
+    listPhone();
+  }
+}
+
+function saveJSON() {
+  // JSONデータをテキストデータに変換
+  phoneData = JSON.stringify(phonebook);
+  // テキストをBLOBに変換
+  var blob = new Blob([phoneData], {type:"text/plain"});
+  // 名前をつけて保存（ダウンロード）
+  var filename = window.prompt("ファイル名を入力してください","phonebook.json");
+  if (filename != null) {
+    if (window.navigator.msSaveBlob) {
+      // msSaveBlobを使用できるブラウザー
+      window.navigator.msSaveBlob(blob, filename);
+    } else {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+</script>
+<style>
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+td {
+  border: 1px solid gray;
+  background: #EEFFFF;
+}
+.header td{background: #CCCCDD;}
+</style>
+</head>
+<body onload="listPhone()">
+<p>電話帳</p>
+<input type="file" accept=".json" onchange="loadJSON(this)">
+<input type="button" value="電話帳を保存" onclick="saveJSON()">
+<hr>
+名前：<input type="text" id="name">
+電話番号：<input type="text" id="tel">
+<input type="button" value="追加" onclick="addPhone()">
+<hr>
+<table id="list"></table>
+</body>
+</html>

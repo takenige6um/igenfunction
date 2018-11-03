@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>サイン曲線を描く</title>
+</head>
+<body>
+<canvas id="canvas" width="400" height="400">
+Canvas not supported ...
+</canvas>
+<script>
+  var canvas = document.getElementById("canvas");
+  var context = canvas.getContext("2d");
+
+  // X軸Y軸を直線で描く
+  context.strokeStyle = "gray";
+  context.beginPath();
+  context.moveTo(0, 200);
+  context.lineTo(400, 200);
+  context.moveTo(10, 0);
+  context.lineTo(10, 400);
+  context.stroke();
+  // サイン曲線を描く
+  context.strokeStyle = "red";
+  context.beginPath();
+  for (var kakudo=0; kakudo < 360; kakudo++) {
+    var radian = kakudo * Math.PI / 180;
+    // プログラム１
+    /* var x = kakudo + 10;
+     * var y = Math.sin(radian) * 100 + 200; */
+    // プログラム２
+    /* var x = Math.cos(radian) * 100 +200;
+     * var y = Math.sin(radian) * 100 +200; */
+    // プログラム３
+    var x = Math.cos(radian) * kakudo/2 + 200;
+    var y = Math.sin(radian) * kakudo/2 + 200;
+    if (kakudo == 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y)
+    }
+  }
+  context.stroke();
+</script>
+</body>
+</html>

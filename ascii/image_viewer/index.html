@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>イメージビューア</title>
+<script>
+var imageList;
+var width;
+var listX = 0;
+var onSwipe = false;
+var x, dx;
+var timer = null, cnt = 0;
+
+function init() {
+  // ビューアのサイズを設定（補正したブラウザのサイズをセット）
+  width = window.innerWidth - 20;
+  document.getElementById("viewer").style.width = width + "px";
+
+  // イメージリストの取得
+  imageList = document.getElementById("imageList");
+
+  // ビューアにイベントハンドラをセット
+  var viewer = document.getElementById("viewer");
+  viewer.addEventListener("mousedown", startSwipe);
+  viewer.addEventListener("mousemove", swipe);
+  viewer.addEventListener("mouseup", stopSwipe);
+  viewer.addEventListener("mouseleave", stopSwipe);
+  viewer.addEventListener("touchstart", startSwipe);
+  viewer.addEventListener("touchmove", swipe);
+  viewer.addEventListener("touchend", stopSwipe);
+  viewer.addEventListener("dragover", dragOverFiles);
+  viewer.addEventListener("drop", dropFiles);
+}
+
+function clickInputFile() {
+  // ダイアログを表示
+  document.getElementById("file").click();
+}
+
+function loadFiles(e) {
+  // 画像ファイルの取得
+  for (i=0; i<e.files.length; i++) {
+    // 画像を追加
+    addImage(e.files[i]);
+  }
+}
+
+function addImage(file) {
+  // DIV要素を作成
+  var div = document.createElement("div");
+  div.classList.add("image");
+
+  // 画像をセット
+  var image = document.createElement("img");
+  image.src = URL.createObjectURL(file);
+  div.appendChild(image);
+
+  // イメージリストに追加
+  imageList.appendChild(div);
+}
+
+function clearList() {
+  // 全画面クリア
+  imageList.innerHTML = "";
+  listX = 0;
+  imageList.style.left = listX + "px";
+}
+
+function startSwipe(event) {
+  // デフォルト動作をキャンセル
+  event.preventDefault();
+
+  // イメージリストの移動開始
+  onSwipe = true;
+  // 座標の取得
+  if (event.type == "mousedown") {
+    x = event.clientX;
+  } else {
+    x = event.changedTouches[0].clientX;
+  }
+}
+
+function swipe(event) {
+  // デフォルト動作をキャンセル
+  event.preventDefault();
+  // イメージリストの移動
+  if (onSwipe) {
+    if (event.type == "mousemove") {
+      dx = event.clientX - x;
+    } else {
+      dx = event.changedTouches[0].clientX - x;
+    }
+    if ((listX+dx < 0)&&(listX+dx > width-getImageListWidth())) {
+      listX += dx;
+      imageList.style.left = listX + "px";
+      if (event.type == "mousemove") {
+        x = event.clientX;
+      } else {
+        x = event.changedTouches[0].clientX;
+      }
+    }
+  }
+}
+
+function stopSwipe(event) {
+  // デフォルト動作をキャンセル
+  event.preventDefault();
+  // イメージリストの移動終了
+  if (onSwipe) {
+    // 慣性移動開始
+    if (timer == null) {
+      timer = setInterval(inertia, 20);
+      cnt = 0;
+    }
+  }
+  onSwipe = false;
+}
+
+function inertia() {
+  // 慣性移動
+  if ((listX+dx < 0)&&(listX+dx > width-getImageListWidth())) {
+    listX += dx;
+    imageList.style.left = listX + "px";
+  }
+  // 慣性移動終了
+  cnt++;
+  if (cnt > 15) {
+    clearInterval(timer);
+    timer = null;
+  }
+}
+
+function getImageListWidth() {
+  // イメージリストの長さを返す
+  var length = 0;
+  var images = imageList.children;
+  for (var i=0; i<images.length; i++) {
+    length += images[i].clientWidth;
+  }
+  return length;
+}
+
+function dragOverFiles(event) {
+  // デフォルト動作をキャンセル
+  event.preventDefault();
+}
+
+function dropFiles(event) {
+  // デフォルト動作をキャンセル
+  event.preventDefault();
+  // ファイルの読み込み
+  loadFiles(event.dataTransfer);
+}
+</script>
+<style>
+input[type="file"] {display: none;}
+#viewer {
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+  border: thin solid #CCCCCC;
+}
+#imageList {
+  position: absolute;
+  left: 0px;
+  display: flex;
+}
+.image img {max-height: 480px;}
+</style>
+</head>
+<body onload="init()">
+<p>イメージビューア</p>
+<input type="button" value="画像を追加" onclick="clickInputFile()">
+<input type="file" id="file" accept="image/*" multiple onchange="loadFiles(this)">
+<input type="button" value="全画面をクリア" onclick="clearList()">
+<hr>
+<div id="viewer">
+<div id="imageList"></div>
+</div>
+</body>
+</html>

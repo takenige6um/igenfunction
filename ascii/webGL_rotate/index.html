@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>WebGL 三角形の回転</title>
+<script>
+var canvas, context;
+var xUniform, yUniform;   // 回転行列の変数位置
+var xAngle, yAngle;       // XY軸の回転角
+var startX, startY;       // 開始位置
+var mouseDown = false;
+
+function init() {
+  canvas = document.getElementById("canvasGL");
+  gl = canvas.getContext("webgl");
+  canvas.width = window.innerWidth - 20;
+  canvas.height = window.innerHeight - 120;
+  // ビューポートをキャンバスサイズに合わせる
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  // 頂点シェーダー
+  var vertexSource = document.getElementById("vertex").text;
+  var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vertexShader, vertexSource);
+  gl.compileShader(vertexShader);
+
+  // フラグメントシェーダー
+  var fragmentSource = document.getElementById("fragment").text;
+  var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fragmentShader, fragmentSource);
+  gl.compileShader(fragmentShader);
+
+  // シェーダープログラム
+  var program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.useProgram(program);
+
+  // 三角形の頂点
+  var verticesData = [
+    0, 0.5, 0,
+    -0.5, -0.5, 0,
+    0.5, -0.5, 0,
+  ];
+  var verticesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesData), gl.STATIC_DRAW);
+  var verticesAttribute = gl.getAttribLocation(program, "vertices");
+  gl.enableVertexAttribArray(verticesAttribute);
+  gl.vertexAttribPointer(verticesAttribute, 3, gl.FLOAT, false, 0, 0);
+
+  // 三角形の頂点の色
+  var colorsData = [
+    1, 0, 0, 1,
+    0, 1, 0, 1,
+    0, 0, 1, 1
+  ];
+  var colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorsData), gl.STATIC_DRAW);
+  var colorsAttribute = gl.getAttribLocation(program, "colors");
+  gl.enableVertexAttribArray(colorsAttribute);
+  gl.vertexAttribPointer(colorsAttribute, 4, gl.FLOAT, false, 0, 0);
+
+  // 回転
+  xAngle = 0;
+  yAngle = 0;
+  xUniform = gl.getUniformLocation(program, "rotateX");
+  yUniform = gl.getUniformLocation(program, "rotateY");
+  rotate();
+}
+
+function rotate() {
+  // X軸回転
+  var mat_rotateX = [
+    1, 0, 0, 0,
+    0, Math.cos(xAngle), -1*Math.sin(xAngle), 0,
+    0, Math.sin(xAngle), Math.cos(xAngle), 0,
+    0, 0, 0, 1
+  ];
+  gl.uniformMatrix4fv(xUniform, false, mat_rotateX);
+  
+  // Y軸回転
+  var mat_rotateY = [
+    Math.cos(yAngle), 0, Math.sin(yAngle), 0,
+    0, 1, 0, 0,
+    -1*Math.sin(yAngle), 0, Math.cos(yAngle), 0,
+    0, 0, 0, 1
+  ];
+  gl.uniformMatrix4fv(yUniform, false, mat_rotateY);
+
+  // 描画
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
+}
+
+function startRotate(event) {
+  mouseDown = true;
+  // 開始位置をセット
+  startX = event.clientX;
+  startY = event.clientY;
+}
+
+function onRotate(event) {
+  if (mouseDown) {
+    // マウスの移動量を回転角に加算
+    var currX = event.clientX;
+    var currY = event.clientY;
+    yAngle += (startX - currX) * 0.01;
+    xAngle += (startY - currY) * 0.01;
+    // 回転
+    rotate();
+    // 開始位置を変更
+    startX = currX;
+    startY = currY;
+  }
+}
+
+function stopRotate(event) {
+  // マウスが放された
+  mouseDown = false;
+}
+
+function resetRotate() {
+  // 回転をリセット
+  xAngle = 0;
+  yAngle = 0;
+  rotate();
+}
+</script>
+<script id="vertex" type="x-shader/x-vertex">
+// 頂点シェーダー
+attribute vec3 vertices;
+attribute vec4 colors;
+uniform mat4 rotateX;
+uniform mat4 rotateY;
+varying lowp vec4 vColor;
+void main() {
+  gl_Position = rotateX * rotateY * vec4(vertices, 1.0);
+  vColor = colors;
+}
+</script>
+<script id="fragment" type="x-shader/x-fragment">
+// フラグメントシェーダー
+varying lowp vec4 vColor;
+void main(void) {
+  gl_FragColor = vColor;
+}
+</script>
+</head>
+<body onload="init()">
+<p>WebGL 三角形の回転</p>
+<input type="button" value="リセット" onclick="resetRotate()">
+<hr>
+<canvas id="canvasGL" onmousedown="startRotate(event)"
+        onmousemove="onRotate(event)" onmouseup="stopRotate(event)">
+Canvas not supported ...
+</canvas>
+</body>
+</html>

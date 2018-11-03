@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>電光掲示板</title>
+<script>
+var canvas, context;
+var x = 600;
+var speed = 4;
+var cnt = 0;
+var timer;
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("board");
+  context = canvas.getContext("2d");
+  var canvasGrid = document.getElementById("grid");
+  var contextGrid = canvasGrid.getContext("2d");
+
+  // グリッド（穴あき）の描画
+  contextGrid.fillStyle = "#000000";
+  contextGrid.fillRect(0, 0, canvasGrid.width, canvasGrid.height);
+  contextGrid.globalCompositeOperation = "destination-out";
+  var step = 4;
+  for (var x=0; x<canvasGrid.width; x+=step) {
+    for (var y=0; y<canvasGrid.height; y+=step) {
+      contextGrid.fillStyle = "#FFFFFF";
+      contextGrid.beginPath();
+      contextGrid.arc(x, y, (step-1)/2, 0, Math.PI*2);
+      contextGrid.fill();
+    }
+  }
+
+  // STOPボタンの無効化
+  document.getElementById("stop").disabled = true;
+}
+
+function startMessage() {
+  // メッセージの描画開始
+  cnt = 0;
+  timer = setInterval(draw, 50);
+
+  // STARTボタンの無効化、STOPボタンの有効化
+  document.getElementById("start").disabled = true;
+  document.getElementById("stop").disabled = false;
+}
+
+function stopMessage() {
+  // メッセージの停止
+  clearInterval(timer);
+  timer = null;
+
+  // STARTボタンの有効化、STOPボタンの無効化
+  document.getElementById("start").disabled = false;
+  document.getElementById("stop").disabled = true;
+}
+
+function clearMessage() {
+  // メッセージのクリア
+  x = 600;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function draw() {
+  // キャンバスのクリア
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  var length = 0;
+  var space = 80;
+  for (var i=0; i<2; i++) {
+    // メッセージ、色の取得
+    var message = document.getElementById("message_"+i).value;
+    var color = document.getElementById("color_"+i).value;
+
+    // メッセージの描画
+    context.font = "bold 80px 'MS P明朝'";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.fillStyle = color;
+    context.shadowColor = color;
+    context.shadowBlur = 15;
+    context.fillText(message, x+length, 50);
+
+    // テキストの長さ
+    length += context.measureText(message).width + space;
+  }
+
+  // メッセージの移動
+  x -= speed;
+  if (x < -1 * length) {
+    x = 600;
+    if (document.getElementById("loop").value == cnt) {
+      // 停止
+      stopMessage();
+    }
+    cnt++;
+  }
+}
+</script>
+<style>
+div {position: relative;}
+#grid {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+#board {background: #000000;}
+form {padding: 5px;}
+input[type="text"] {width: 400px;}
+input[type="number"] {width: 40px;}
+</style>
+</head>
+<body onload="init()">
+<p>電光掲示板</p>
+<input type="button" id="start" value="START" onclick="startMessage()" />
+<input type="button" id="stop" value="STOP" onclick="stopMessage()" />
+<input type="button" id="stop" value="CLEAR" onclick="clearMessage()" />
+<hr/>
+<div>
+<canvas id="board" width="600" height="100">
+Canvas not supported ...
+</canvas>
+<canvas id="grid" width="600" height="100">
+Canvas not supported ...
+</canvas>
+</div>
+<form>
+ループ回数 : <input type="number" id="loop" value="-1"> (-1 : 無限ループ)
+<br/>
+<input type="color" id="color_0" value="#FF8040"/>
+<input type="text" id="message_0" value="まもなくBABYMETALがまいります。"/>
+<br/>
+<input type="color" id="color_1" value="#00FF00" />
+<input type="text" id="message_1" value="白線の内側までお下がりくださいDEATH。" />
+</form>
+</body>
+</html>

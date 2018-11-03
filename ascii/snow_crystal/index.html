@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>雪の結晶</title>
+<script>
+var canvas, context, canvasSnow, contextSnow;
+var snowParts = new Array(5);
+var snowfall = new Array();
+var cnt = 0, maxSnow = 20;
+
+// 雪クラス
+function Snow(x, y, size, parts) {
+  this.x = x;                         // 位置
+  this.y = y;
+  this.rotAngle = 0;                  // 回転角度
+  this.size = size;                   // 大きさ
+  this.status = "alive";              // ステータス
+  this.parts = parts.concat();        // パーツ
+}
+
+Snow.prototype.move = function() {
+  // 雪の移動
+  var x = this.x + Math.sin(this.y/30) * this.size * 2;
+  this.y += this.size / 4;
+  if (this.y > canvas.height) this.status = "dead";
+  this.rotAngle += 0.02;
+
+  // 雪の結晶を描画
+  drawSnow(context, x, this.y, this.rotAngle, this.size, this.parts);
+}
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("night");
+  context = canvas.getContext("2d");
+  canvasSnow = document.getElementById("snow");
+  contextSnow = canvasSnow.getContext("2d");
+
+  // 雪の結晶を作成
+  createSnow();
+
+  // タイマー開始
+  setInterval(fall, 50);
+}
+
+function drawSnow(context, x, y, rotAngle, size, parts) {
+  // 雪の結晶を描画
+  var angle = rotAngle;
+  context.font = size + "px sans-serif";
+  context.textAlign = "center";
+  context.fillStyle = "rgba(204, 255, 255, 0.8)";
+  for (var i=0; i<6; i++) {
+    // キャンバスの保存
+    context.save();
+    // キャンバスの移動
+    context.translate(x, y);
+    // キャンバスの回転
+    angle += Math.PI/3;
+    context.rotate(angle);
+    // パーツの描画
+    for (var j=0; j<5; j++) {
+      context.fillText(parts[j], 0, -1*(size/2)*j);
+    }
+    // キャンバスの復元
+    context.restore();
+  }
+}
+
+function createSnow() {
+  // パーツのセット
+  for (var i=0; i<5; i++) {
+    snowParts[i] = document.getElementById("parts_"+i).value;
+  }
+
+  // 雪の結晶を描画
+  var w = canvasSnow.width;
+  var h = canvasSnow.height;
+  contextSnow.clearRect(0, 0, w, h);
+  drawSnow(contextSnow, w/2, h/2, 0, 40, snowParts);
+}
+
+function fall() {
+  // 雪の生成
+  if (cnt < maxSnow) {
+    var x = Math.random() * canvas.width;
+    var y = -5 * cnt;
+    var size = Math.random() * 5 + 1;
+    snowfall.push(new Snow(x, y, size, snowParts));
+    cnt++;
+  }
+
+  // 背景
+  var grad = context.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, "#000000");
+  grad.addColorStop(0.8, "#000066");
+  grad.addColorStop(1, "#330033");
+  context.fillStyle = grad;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 雪の移動＋描画
+  for (var i=0; i<snowfall.length; i++) {
+    if (snowfall[i].status == "alive") {
+      snowfall[i].move();
+    } else {
+      // 雪の再生成
+      var x = Math.random() * canvas.width;
+      var size = Math.random() * 5 + 1;
+      snowfall[i] = new Snow(x, 0, size, snowParts);
+    }
+  }
+}
+</script>
+<style>
+input[type="text"] {width: 30px;}
+canvas {background: #000000;}
+#night {
+  float: left;
+  margin-right: 10px;
+}
+</style>
+</head>
+<body onload="init()">
+<p>雪の結晶</p>
+<hr>
+<canvas id="night" width="480" height="640">
+Canvas not supported ...
+</canvas>
+<div>
+<canvas id="snow" width="320" height="320">
+Canvas not supported ...
+</canvas>
+<div>
+<input type="text" id="parts_0" value="A" />
+<input type="text" id="parts_1" value="T" />
+<input type="text" id="parts_2" value="*Y*" />
+<input type="text" id="parts_3" value="*T*" />
+<input type="text" id="parts_4" value="*" />
+<input type="button" value="雪の結晶を作成" onclick="createSnow()" />
+</div>
+</div>
+</body>
+</html>

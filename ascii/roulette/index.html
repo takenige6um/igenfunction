@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ルーレット</title>
+<script>
+var canvas, context, canvasRect;
+var num = 6, text = new Array();    // 分割数、テキスト
+var speed, friction, rotateAngle = 0;  // 回転速度、摩擦、回転角
+var timer;
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("roulette");
+  context = canvas.getContext("2d");
+
+  // STOPボタンの無効化
+  document.getElementById("stop").disabled = true;
+
+  // ルーレットの初期描画
+  setRoulette();
+}
+
+function setRoulette() {
+  // 回転角の初期化
+  rotateAngle = 0;
+
+  // テキストのセット
+  text = [];
+  for (var i=0; i<num; i++) {
+    text.push(document.getElementById("text_"+i).value);
+  }
+
+  // ルーレットの描画
+  draw();
+}
+
+function setInputText() {
+  // 分割数の取得
+  var currNum = num;
+  num = Number(document.getElementById("num").value);
+
+  if (currNum > num) {
+    // 入力ボックスの削除
+    for (var i=currNum-1; i>=num; i--) {
+      var e = document.getElementById("text_"+i);
+      document.getElementById("textList").removeChild(e);
+    }
+  } else {
+    // 入力ボックスの追加
+    for (var i=currNum; i<num; i++) {
+      var e = document.createElement("input");
+      e.type = "text";
+      e.id = "text_"+i;
+      document.getElementById("textList").appendChild(e);
+    }
+  }
+}
+
+function draw() {
+  // キャンバスをクリア
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.lineWidth = 2;
+
+  // 扇型の角度、色相間隔
+  var angle = Math.PI*2/text.length;
+  var hue = Math.floor(360/text.length);
+
+  // ルーレットの描画
+  for (var i=0; i<text.length; i++) {
+    context.save();
+    context.translate(320, 320);
+    context.rotate(i*angle + rotateAngle);
+
+    // 扇型
+    context.fillStyle = "hsl("+hue*i+", 100%, 80%)";
+    context.beginPath();
+    context.moveTo(0, 0);
+    context.arc(0, 0, 300, angle*(-1/2), angle*(1/2));
+    context.closePath();
+    context.fill();
+    context.stroke();
+
+    // テキスト
+    context.fillStyle = "black";
+    context.font = "30px 'メイリオ'";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(text[i], 150, 0);
+
+    context.restore();
+  }
+
+  // 三角形の描画
+  context.fillStyle = "white";
+  context.beginPath();
+  context.moveTo(630, 300);
+  context.lineTo(630, 340);
+  context.lineTo(580, 320);
+  context.closePath();
+  context.fill();
+  context.stroke();
+}
+
+function rotate() {
+  // ルーレットの回転
+  speed -= friction;
+  rotateAngle += speed;
+  draw();
+
+  // 回転停止
+  if (speed < 0) {
+    // タイマー停止
+    clearInterval(timer);
+
+    // ステータス欄をクリア、STARTボタンの有効化
+    document.getElementById("status").innerHTML = "";
+    document.getElementById("start").disabled = false;
+  }
+}
+
+function startRoulette() {
+  // 回転開始
+  speed = 0.4;
+  friction = 0;
+  document.getElementById("status").innerHTML = "ルーレット回転！";
+
+  // STARTボタンの無効化、STOPボタンの有効化
+  document.getElementById("start").disabled = true;
+  document.getElementById("stop").disabled = false;
+
+  // タイマー開始
+  timer = setInterval(rotate, 30);
+}
+
+function stopRoulette() {
+  // 回転ストップ
+  friction = 0.005;
+  document.getElementById("status").innerHTML = "STOP!";
+
+  // STOPボタンの無効化
+  document.getElementById("stop").disabled = true;
+}
+</script>
+<style>
+canvas {
+  float: left;
+  margin-right: 10px;
+}
+form {
+  background: #CCCCCC;
+  width: 200px;
+  padding: 10px;
+  overflow: hidden;
+}
+#num {width: 50px;}
+input[type="text"] {display: block;}
+</style>
+</head>
+<body onload="init()">
+<p>ルーレット</p>
+<input type="button" id="start" value="START" onclick="startRoulette()">
+<input type="button" id="stop" value="STOP" onclick="stopRoulette()">
+<span id="status"></span>
+<hr>
+<canvas id="roulette" width="640" height="640">
+Canvas not supported ...
+</canvas>
+<form>
+分割数 : <input type="number" id="num" value="6">
+<input type="button" value="変更" onclick="setInputText()">
+<div id="textList">
+<input type="text" id="text_0" value="ハワイ旅行">
+<input type="text" id="text_1" value="液晶テレビ">
+<input type="text" id="text_2" value="黒毛和牛">
+<input type="text" id="text_3" value="電気自転車">
+<input type="text" id="text_4" value="商品券">
+<input type="text" id="text_5" value="たわし">
+</div>
+<input type="button" value="ルーレットに反映" onclick="setRoulette()">
+</form>
+</body>
+</html>

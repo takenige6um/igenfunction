@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>パーティクル・テキスト</title>
+<script>
+  var canvas, context, canvasText, contextText;
+  var particles = new Array();
+  var timer = null;
+  var status = "text"
+  var hue = 0;
+  // フォント
+  var fonts = ["arial", "Comic Sans MS", "Courier New", "Georgia",
+               "Lucida Console", "Segoe Print", "Times New Roman", "Verdana",
+               "MS 明朝", "MS ゴシック", "メイリオ"];
+
+  // パーティクルクラス
+  function Particle(x, y, size, cx, cy) {
+    // テキスト位置
+    this.tx = x * size + cx;
+    this.ty = y * size + cy;
+    // 目標地点
+    this.targetX = this.tx;
+    this.targetY = this.ty;
+    // 現在の位置
+    this.x = Math.floor(Math.random()*canvas.width);
+    this.y = Math.floor(Math.random()*canvas.height);
+    // 半径、速さ
+    this.r = (size-1) / 2;
+    this.speed = Math.random() * 5 + 5;
+  }
+
+  Particle.prototype.update = function() {
+    // 目的地までの距離
+    var dx = this.targetX - this.x;
+    var dy = this.targetY - this.y;
+    var d = Math.sqrt(Math.pow(dx, 2)+Math.pow(dy, 2));
+    if ((d < 20)&&(status == "text")) {
+      // 減速
+      this.speed *= 0.8;
+    } else {
+      this.speed = Math.random() * 5 + 5;
+    }
+    // 目的地へ移動
+    if (d > this.speed) {
+      this.x += dx/d * this.speed;
+      this.y += dy/d * this.speed;
+    } else {
+      if (status == "text") {
+        this.x = this.targetX;
+        this.y = this.targetY;
+      } else {
+        this.changeTarget();
+      }
+    }
+
+    // 描画
+    context.fillStyle = "hsla("+hue+", 100%, 80%, 0.2)"
+    context.beginPath();
+    context.arc(this.x, this.y, this.r, 0, 2*Math.PI);
+    context.fill();
+  }
+
+  Particle.prototype.changeTarget = function() {
+    if (status == "text") {
+      // 目標地点、テキスト位置
+      this.targetX = this.tx;
+      this.targetY = this.ty;
+    } else {
+      // 目的地点、ランダムな場所
+      this.targetX = Math.floor(Math.random() * canvas.width);
+      this.targetY = Math.floor(Math.random() * canvas.height);
+    }
+  }
+
+  function init() {
+    // キャンバスの取得
+    canvas = document.getElementById("canvas");
+    context = canvas.getContext("2d");
+    canvasText = document.getElementById("canvasText");
+    contextText = canvasText.getContext("2d");
+    // キャンバスのサイズを設定
+    canvas.width = window.innerWidth - 20;
+    canvas.height = window.innerHeight - 120;
+
+    // フォントのセット
+    var select = document.getElementById("font");
+    for (var i=0; i<fonts.length; i++) {
+      var option = document.createElement("option")
+      option.value = fonts[i];
+      option.innerText = fonts[i];
+      select.appendChild(option);
+    }
+  }
+
+  function setText() {
+    // テキスト、フォントの取得
+    var text = document.getElementById("text").value;
+    var select = document.getElementById("font");
+    var font = select.options[select.selectedIndex].value;
+
+    // テキストの描画
+    contextText.clearRect(0, 0, canvasText.width, canvasText.height);
+    contextText.font = "20px '"+font+"'";
+    contextText.textAlign = "center";
+    contextText.textBaseline = "middle";
+    contextText.fillStyle = "#FFFFFF";
+    contextText.fillText(text, canvasText.width/2, canvasText.height/2);
+
+    // 画像データを走査
+    particles = [];
+    var iData = contextText.getImageData(0, 0, canvasText.width, canvasText.height);
+    var amount = 250;
+    var size = Math.floor(canvas.width/canvasText.width);
+    var cx = (canvas.width - canvasText.width * size) / 2;
+    var cy = (canvas.height - canvasText.height * size) / 2;
+    for (var y=0; y<canvasText.height; y++) {
+      for (var x=0; x<canvasText.width; x++) {
+        var index = (x + y*canvasText.width)*4;
+        var r = iData.data[index];
+        var g = iData.data[index+1];
+        var b = iData.data[index+2];
+        if ((r > amount)&&(g > amount)&&(b > amount)) {
+          // パーティクルを作成
+          particles.push(new Particle(x, y, size, cx, cy));
+        }
+      }
+    }
+
+    // パーティクルの移動開始
+    status = "text";
+    if (timer == null) timer = setInterval(draw, 20);
+  }
+
+  function draw() {
+    // 半透明の黒で塗りつぶす
+    context.fillStyle = "rgba(0, 0, 0, 0.1)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    // パーティクルの更新
+    for (var i=0; i<particles.length; i++) {
+      particles[i].update();
+    }
+
+    // 色相を加算
+    hue++;
+    if (hue == 360) hue = 0;
+  }
+
+  function changeStatus() {
+    // ステータスの変更
+    if (status == "text") {
+      status = "random";
+    } else {
+      status = "text";
+    }
+
+    // パーティクルの目的地点を変更
+    for (var i=0; i<particles.length; i++) {
+      particles[i].changeTarget();
+    }
+  }
+</script>
+<style>
+  canvas {background-color: #000000;}
+  #canvasText {vertical-align: bottom;}
+</style>
+</head>
+<body onload="init()">
+<p>パーティクル・テキスト</p>
+テキスト：<input type="text" id="text" value="12345ABCDEabcde">
+フォント：<select id="font"></select>
+<input type="button" value="SET" onclick="setText()">
+<canvas id="canvasText" width="200" height="30">
+Canvas not supported ...
+</canvas>
+<hr>
+<canvas id="canvas" onmousedown="changeStatus()">
+Canvas not supported ...
+</canvas>
+</body>
+</html>
