@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>タイピング</title>
+<script>
+// テキストを配列で管理
+var array = ["dog","apple","dandelion","hippopotamus","a vegetarian restaurant",
+             "Do you speak English?","No, I can't.",
+             "The early bird catches the worm.","Necessity is the mother of invention.",
+             "If you can dream it, you can do it."
+];
+var index;
+
+// 変数
+var timer;
+var posY;
+var targetText;
+var checkText;
+var score, bonus;
+
+function startTyping() {
+  // 初期化
+  index = 0;
+  score = 0;
+  bonus = 0;
+  // Startボタンを無効化
+  document.getElementById("start").disabled = true;
+  document.getElementById("in").focus();
+  // スタート
+  setText();
+}
+
+function setText() {
+  // ターゲットテキストの位置を上に変更
+  posY = -30;
+  document.getElementById("target").style.top = posY+"px";
+  // ターゲットテキストをセット
+  targetText = array[index];
+  document.getElementById("target").innerText = targetText;
+
+  // チェック用テキストにターゲット文字数の０をセット
+  checkText = "";
+  for (var i=0; i<targetText.length; i++) {
+    checkText += "0";
+  }
+
+  // 問題数を表示
+  document.getElementById("status").innerText = (index+1)+"/"+array.length;
+
+  // 0.05秒ごとにターゲットテキストを落下
+  timer = setInterval(fall, 50);
+}
+
+function fall() {
+  // ターゲットテキストの位置を落下
+  posY += 1;
+  document.getElementById("target").style.top = posY+"px";
+  // 300を超えると終了
+  if (posY > 300) {
+    fallOut();
+  }
+}
+
+function fallOut() {
+  // 入力欄をクリア
+  document.getElementById("in").value = "";
+  // タイマー停止
+  clearInterval(timer);
+
+  if (index<array.length-1) {
+    // 次のテキストへ
+    index++;
+    setText();
+  } else {
+    // 終了、得点発表
+    document.getElementById("target").style.top = "100px";
+    var scoreText = "SCORE: "+("000000"+score).slice(-6);
+    scoreText += "<br>BONUS: "+("000000"+bonus).slice(-6)
+    scoreText += "<hr>TOTAL: "+("000000"+(score+bonus)).slice(-6);
+    document.getElementById("target").innerHTML = scoreText;
+
+    // Startボタンを有効化
+    document.getElementById("start").disabled = false;
+  }
+}
+
+function typing() {
+  // 入力されたテキストを取得
+  var inText = document.getElementById("in").value;
+
+  // 文字数チェック（ターゲットテキストの文字数を制限）
+  if (inText.length > targetText.length) {
+    inText = inText.slice(0, targetText.length);
+    document.getElementById("in").value = inText;
+  }
+
+  // １文字ずつチェック
+  for (var i=0; i<targetText.length; i++) {
+    if (i < inText.length) {
+      // チェック用テキストに「１」（正しい）または「２」（間違い）をセット
+      if (targetText.charAt(i) == inText.charAt(i)) {
+        checkText = checkText.slice(0, i)+"1"+checkText.slice(i+1);
+      } else {
+        checkText = checkText.slice(0, i)+"2"+checkText.slice(i+1);
+      }
+    } else {
+      // 未入力部分は「０」（未入力）をセット
+      checkText = checkText.slice(0, i)+"0"+checkText.slice(i+1);
+    }
+  }
+
+  // 正しくタイプできた文字色を変更
+  var tempText = "";
+  var cnt = 0;
+  for (var i=0; i<checkText.length; i++) {
+    if (checkText.charAt(i) == "1") {
+      tempText += '<font color="#00FF00">'+targetText.charAt(i)+'</font>';
+      // 正しくタイプできた文字数をカウント
+      cnt++;
+    } else if (checkText.charAt(i) == "2") {
+      // 誤入力
+      tempText += '<font color="#FF0000">'+targetText.charAt(i)+'</font>';
+    } else {
+      // 未入力
+      tempText += targetText.charAt(i);
+    }
+  }
+  document.getElementById("target").innerHTML = tempText;
+
+  // すべて正しくタイプされていれば終了
+  if (cnt == targetText.length) {
+    // 得点を加算、ターゲット位置をボーナス得点に加算
+    score += cnt*100;
+    bonus += (300-posY)*100;
+    fallOut();
+  }
+}
+</script>
+<style>
+#fall_area {
+  position: relative;
+  height: 300px;
+  background: #333333;
+}
+#target {
+  font: bold 18pt 'Courier New';
+  color: #FFFFCC;
+  text-align: center;
+  position: relative;
+  top: -30px;
+  z-index: 1;
+}
+.hidden_area {
+  position: relative;
+  height: 30px;
+  background: #000000;
+  z-index: 2;
+}
+form {text-align: center;}
+#start {
+  width: 100px;
+  margin: 10px;
+}
+#status {
+  color: #FFFFFF;
+  line-height: 30px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<p>タイピング</p>
+<div class="hidden_area" id="status">Press Start button</div>
+<div id="fall_area">
+<div id="target">(Target Text)</div>
+</div>
+<div class="hidden_area"></div>
+<hr>
+<form>
+<input type="text" id="in" size="100" oninput="typing()"><br>
+<input type="button" id="start" value="Start" onclick="startTyping()">
+</form>
+</body>
+</html>

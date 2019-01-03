@@ -4,157 +4,157 @@
 <meta charset="utf-8">
 <title>SAME GAME</title>
 <script>
-  var canvas, canvasRect;
-  var cnt, total;
+var canvas, canvasRect;
+var cnt, total;
 
-  // 駒（大きさ、縦横の数、色）
-  var piece = new Array();
-  var size = 40, width = 15, height = 10;
-  var colors = ["#FFFFFF", "#CC0000", "#CCCC00", "#00CC00", "#0000CC"];
+// 駒（大きさ、縦横の数、色）
+var piece = new Array();
+var size = 40, width = 15, height = 10;
+var colors = ["#FFFFFF", "#CC0000", "#CCCC00", "#00CC00", "#0000CC"];
 
-  function init() {
-    // キャンバスの取得
-    canvas = document.getElementById("game");
-    context = canvas.getContext("2d");
-    // キャンバスの絶対座標を取得
-    canvasRect = canvas.getBoundingClientRect();
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("game");
+  context = canvas.getContext("2d");
+  // キャンバスの絶対座標を取得
+  canvasRect = canvas.getBoundingClientRect();
 
-    // 駒の初期化
-    initPiece();
-  }
+  // 駒の初期化
+  initPiece();
+}
 
-  function initPiece() {
-    // 駒の初期化
-    total = width * height;
-    for (var x=0; x<width; x++) {
-      for (var y=0; y<height; y++) {
-        piece[x+y*width] = Math.floor(Math.random()*4) + 1;
-      }
+function initPiece() {
+  // 駒の初期化
+  total = width * height;
+  for (var x=0; x<width; x++) {
+    for (var y=0; y<height; y++) {
+      piece[x+y*width] = Math.floor(Math.random()*4) + 1;
     }
+  }
+  // 描画
+  drawPiece();
+
+  // 駒の数、ステータスの初期化
+  document.getElementById("total").innerHTML = total;
+  document.getElementById("status").innerHTML = "";
+}
+
+function drawPiece() {
+  // 駒の描画
+  for (var x=0; x<width; x++) {
+    for (var y=0; y<height; y++) {
+      context.strokeStyle = "#FFFFFF";
+      context.fillStyle = colors[piece[x+y*width]];
+      context.beginPath();
+      context.fillRect(x*size, y*size, size, size);
+      context.strokeRect(x*size, y*size, size, size);
+    }
+  }
+}
+
+function clickPiece(event) {
+  // マウスカーソルの位置
+  var cx = event.clientX - canvasRect.left;
+  var cy = event.clientY - canvasRect.top;
+  // 駒
+  var x = Math.floor(cx/size);
+  var y = Math.floor(cy/size);
+  var data = piece[x+y*width];
+
+  // 削除チェック
+  cnt = 0;
+  checkPiece(x, y, x, y, data);
+  if (cnt > 1) {
+    // 駒の削除、移動処理
+    total -= cnt;
+    dropPiece();
+    slidePiece();
     // 描画
     drawPiece();
-
-    // 駒の数、ステータスの初期化
-    document.getElementById("total").innerHTML = total;
-    document.getElementById("status").innerHTML = "";
+  } else {
+    // 上下左右に同じ駒がない（仮削除を元に戻す）
+    piece[x+y*width] = data;
   }
 
-  function drawPiece() {
-    // 駒の描画
-    for (var x=0; x<width; x++) {
-      for (var y=0; y<height; y++) {
-        context.strokeStyle = "#FFFFFF";
-        context.fillStyle = colors[piece[x+y*width]];
-        context.beginPath();
-        context.fillRect(x*size, y*size, size, size);
-        context.strokeRect(x*size, y*size, size, size);
+  // ゲームオーバーチェック
+  var status = "check";
+  for (var x=0; x<width; x++) {
+    for (var y=0; y<height; y++) {
+      if (piece[x+y*width] > 0) {
+        cnt = 0;
+        checkPiece(x, y, x, y, piece[x+y*width]);
+        if (cnt > 1) {
+          status = "play";
+          break;
+        }
       }
     }
   }
+  // 仮削除のデータを元に戻す
+  for (var x=0; x<width; x++) {
+    for (var y=0; y<height; y++) {
+      if (piece[x+y*width] < 0) piece[x+y*width] *= -1;
+    }
+  }
 
-  function clickPiece(event) {
-    // マウスカーソルの位置
-    var cx = event.clientX - canvasRect.left;
-    var cy = event.clientY - canvasRect.top;
-    // 駒
-    var x = Math.floor(cx/size);
-    var y = Math.floor(cy/size);
-    var data = piece[x+y*width];
-
-    // 削除チェック
-    cnt = 0;
-    checkPiece(x, y, x, y, data);
-    if (cnt > 1) {
-      // 駒の削除、移動処理
-      total -= cnt;
-      dropPiece();
-      slidePiece();
-      // 描画
-      drawPiece();
+  // 駒の数、ゲームオーバーの表示
+  document.getElementById("total").innerHTML = total;
+  if (status == "check") {
+    if (total == 0) {
+      document.getElementById("status").innerHTML = "Clear!";
     } else {
-      // 上下左右に同じ駒がない（仮削除を元に戻す）
-      piece[x+y*width] = data;
+      document.getElementById("status").innerHTML = "Game Over";
     }
+  }
+}
 
-    // ゲームオーバーチェック
-    var status = "check";
-    for (var x=0; x<width; x++) {
-      for (var y=0; y<height; y++) {
-        if (piece[x+y*width] > 0) {
-          cnt = 0;
-          checkPiece(x, y, x, y, piece[x+y*width]);
-          if (cnt > 1) {
-            status = "play";
-            break;
-          }
+function checkPiece(ox, oy, x, y, data) {
+  // 駒のチェック
+  if ((piece[x+y*width] == data)&&(data > 0)) {
+    // 同じ駒を仮削除
+    piece[x+y*width] = data * (-1);
+    cnt++;
+
+    // 上下左右の駒をチェック
+    if ((y > 0)&&(oy != y-1)) checkPiece(x, y, x, y-1, data);
+    if ((y < height-1)&&(oy != y+1)) checkPiece(x, y, x, y+1, data);
+    if ((x > 0)&&(ox != x-1)) checkPiece(x, y, x-1, y, data);
+    if ((x < width-1)&&(ox != x+1)) checkPiece(x, y, x+1, y, data);
+  }
+}
+
+function dropPiece() {
+  // 削除処理（上→下）
+  for (var x=0; x<width; x++) {
+    for (var y=0; y<height; y++) {
+      if ((piece[x+y*width] < 0)&&(y > 0)) {
+        // 上の駒を下へ移動
+        for (var i=y; i>0; i--) {
+          piece[x+i*width] = piece[x+(i-1)*width];
+          piece[x+(i-1)*width] = 0;
         }
-      }
-    }
-    // 仮削除のデータを元に戻す
-    for (var x=0; x<width; x++) {
-      for (var y=0; y<height; y++) {
-        if (piece[x+y*width] < 0) piece[x+y*width] *= -1;
-      }
-    }
-
-    // 駒の数、ゲームオーバーの表示
-    document.getElementById("total").innerHTML = total;
-    if (status == "check") {
-      if (total == 0) {
-        document.getElementById("status").innerHTML = "Clear!";
-      } else {
-        document.getElementById("status").innerHTML = "Game Over";
+      } else if ((piece[x+y*width] < 0)&&(y == 0)) {
+        piece[x+y*width] = 0;
       }
     }
   }
+}
 
-  function checkPiece(ox, oy, x, y, data) {
-    // 駒のチェック
-    if ((piece[x+y*width] == data)&&(data > 0)) {
-      // 同じ駒を仮削除
-      piece[x+y*width] = data * (-1);
-      cnt++;
-
-      // 上下左右の駒をチェック
-      if ((y > 0)&&(oy != y-1)) checkPiece(x, y, x, y-1, data);
-      if ((y < height-1)&&(oy != y+1)) checkPiece(x, y, x, y+1, data);
-      if ((x > 0)&&(ox != x-1)) checkPiece(x, y, x-1, y, data);
-      if ((x < width-1)&&(ox != x+1)) checkPiece(x, y, x+1, y, data);
-    }
-  }
-
-  function dropPiece() {
-    // 削除処理（上→下）
-    for (var x=0; x<width; x++) {
-      for (var y=0; y<height; y++) {
-        if ((piece[x+y*width] < 0)&&(y > 0)) {
-          // 上の駒を下へ移動
-          for (var i=y; i>0; i--) {
-            piece[x+i*width] = piece[x+(i-1)*width];
-            piece[x+(i-1)*width] = 0;
-          }
-        } else if ((piece[x+y*width] < 0)&&(y == 0)) {
-          piece[x+y*width] = 0;
+function slidePiece() {
+  // 移動処理（右→左）
+  for (var x=width-1; x>=0; x--) {
+    // 一番下の駒を調べる
+    if (piece[x+(height-1)*width] == 0) {
+      // 右の駒を左へ移動
+      for (var i=x; i<width-1; i++) {
+        for (var j=0; j<height; j++) {
+          piece[i+j*width] = piece[(i+1)+j*width];
+          piece[(i+1)+j*width] = 0;
         }
       }
     }
   }
-
-  function slidePiece() {
-    // 移動処理（右→左）
-    for (var x=width-1; x>=0; x--) {
-      // 一番下の駒を調べる
-      if (piece[x+(height-1)*width] == 0) {
-        // 右の駒を左へ移動
-        for (var i=x; i<width-1; i++) {
-          for (var j=0; j<height; j++) {
-            piece[i+j*width] = piece[(i+1)+j*width];
-            piece[(i+1)+j*width] = 0;
-          }
-        }
-      }
-    }
-  }
+}
 </script>
 <style>
 canvas {border: solid thin #CCCCCC;}

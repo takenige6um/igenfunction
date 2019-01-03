@@ -1,142 +1,142 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8">
-    <title>俳句自動生成</title>
-    <script>
-      // ２次元配列でワードを管理
-      var array = new Array(5);
-      // index=文字列-1
-      array[0] = ["や", "に", "の", "を", "へ", "と", "ぞ", "も", "は"];
-      array[1] = ["けり", "かな", "こそ", "より", "ほど", "さえ", "春", "夏", "秋", "冬", "山", "海", "波", "川", "水", "富士", "松", "竹", "梅", "柿", "菊", "藤", "君", "夢", "影", "雨", "雪", "花", "蝉", "風", "雲", "星", "空", "明日", "音", "朝", "昼", "夕", "夜"];
-      array[2] = ["桜", "若葉", "紅葉", "赤い", "青き", "深き", "古き", "椿", "すすき", "走る", "花火", "氷", "林檎", "野菊", "蛍", "願い", "思い", "景色", "光", "香る", "響く", "麓", "水面", "鏡", "映る"];
-      array[3] = ["夕暮れ", "やまびこ", "朝顔", "木枯らし", "一輪", "名月", "万緑", "五月雨", "初富士"];
-      array[4] = ["クリスマス", "初時雨", "最上川", "隅田川", "ほととぎす", "赤とんぼ", "桜草", "牡丹雪", "天の川", "雨蛙", "渡り鳥", "たなごころ", "恋心"];
+<head>
+<meta charset="utf-8">
+<title>俳句自動生成</title>
+<script>
+ // ２次元配列でワードを管理
+ var array = new Array(5);
+ // index=文字列-1
+ array[0] = ["や", "に", "の", "を", "へ", "と", "ぞ", "も", "は"];
+ array[1] = ["けり", "かな", "こそ", "より", "ほど", "さえ", "春", "夏", "秋", "冬", "山", "海", "波", "川", "水", "富士", "松", "竹", "梅", "柿", "菊", "藤", "君", "夢", "影", "雨", "雪", "花", "蝉", "風", "雲", "星", "空", "明日", "音", "朝", "昼", "夕", "夜"];
+ array[2] = ["桜", "若葉", "紅葉", "赤い", "青き", "深き", "古き", "椿", "すすき", "走る", "花火", "氷", "林檎", "野菊", "蛍", "願い", "思い", "景色", "光", "香る", "響く", "麓", "水面", "鏡", "映る"];
+ array[3] = ["夕暮れ", "やまびこ", "朝顔", "木枯らし", "一輪", "名月", "万緑", "五月雨", "初富士"];
+ array[4] = ["クリスマス", "初時雨", "最上川", "隅田川", "ほととぎす", "赤とんぼ", "桜草", "牡丹雪", "天の川", "雨蛙", "渡り鳥", "たなごころ", "恋心"];
 
-      // 俳句生成
-      function generate() {
-        // 上５文字
-        document.getElementById("kami").innerHTML = get_ku(5);
-        // 中７文字
-        document.getElementById("naka").innerHTML = get_ku(7);
-        // 下５文字
-        document.getElementById("shimo").innerHTML = get_ku(5);
-      }
+ // 俳句生成
+ function generate() {
+   // 上５文字
+   document.getElementById("kami").innerHTML = get_ku(5);
+   // 中７文字
+   document.getElementById("naka").innerHTML = get_ku(7);
+   // 下５文字
+   document.getElementById("shimo").innerHTML = get_ku(5);
+ }
 
-      // ワード取得
-      function get_word(index) {
-        // indexの配列からランダムなワードを取得
-        var select = Math.floor(Math.random() * array[index].length);
-        return array[index][select];
-      }
+ // ワード取得
+ function get_word(index) {
+   // indexの配列からランダムなワードを取得
+   var select = Math.floor(Math.random() * array[index].length);
+   return array[index][select];
+ }
 
-      function get_word_type(word) {
-        if ((word == "かな") || (word == "けり") || (word == "や") ||
-            (word == "に") || (word == "の") || (word == "を") || (word == "へ") ||
-            (word == "と") || (word == "ぞ") || (word == "も") || (word == "は")) {
-          return 1;
-        } else {
-          return 0;
-        }
-      }
+ function get_word_type(word) {
+   if ((word == "かな") || (word == "けり") || (word == "や") ||
+       (word == "に") || (word == "の") || (word == "を") || (word == "へ") ||
+       (word == "と") || (word == "ぞ") || (word == "も") || (word == "は")) {
+     return 1;
+   } else {
+     return 0;
+   }
+ }
 
-      // 句生成
-      function get_ku(ku_length) {
-        var num;
-        var ku;
-        var word;
-        var word_index;       // ワードindex（文字数ー１）
-        var prev_word_type;   // 直前のワードタイプ、1:助詞or切れ字 0:その他
+ // 句生成
+ function get_ku(ku_length) {
+   var num;
+   var ku;
+   var word;
+   var word_index;       // ワードindex（文字数ー１）
+   var prev_word_type;   // 直前のワードタイプ、1:助詞or切れ字 0:その他
 
-        num = 0;
-        prev_word_type = 0;
-        while (num < ku_length) {
-          if (num == 0) {
-            // 先頭
-            // ワード取得
-            word_index = Math.floor(Math.random() * array.length);
-            word = get_word(word_index);
+   num = 0;
+   prev_word_type = 0;
+   while (num < ku_length) {
+     if (num == 0) {
+       // 先頭
+       // ワード取得
+       word_index = Math.floor(Math.random() * array.length);
+       word = get_word(word_index);
 
-            // 句にセット
-            if (get_word_type(word) == 0) {
-              // ワードを句の先頭にセット
-              ku = word;
-            } else {
-              // 助詞または切れ字→やり直し
-              word_index = -1;
-            }
-          } else {
-            // 残り１文字
-            if (ku_length-num == 1) {
-              if (prev_word_type == 1) {
-                // 直前が助詞または切れ字→終了（字足らず）
-                break;
-              }
-            }
+       // 句にセット
+       if (get_word_type(word) == 0) {
+         // ワードを句の先頭にセット
+         ku = word;
+       } else {
+         // 助詞または切れ字→やり直し
+         word_index = -1;
+       }
+     } else {
+       // 残り１文字
+       if (ku_length-num == 1) {
+         if (prev_word_type == 1) {
+           // 直前が助詞または切れ字→終了（字足らず）
+           break;
+         }
+       }
 
-            // ワード取得
-            if (ku_length-num == 2) {
-              // 残り２文字の時は２文字に固定
-              word_index = 1;
-            } else {
-              word_index = Math.floor(Math.random() * (ku_length-num));
-            }
-            word = get_word(word_index);
+       // ワード取得
+       if (ku_length-num == 2) {
+         // 残り２文字の時は２文字に固定
+         word_index = 1;
+       } else {
+         word_index = Math.floor(Math.random() * (ku_length-num));
+       }
+       word = get_word(word_index);
 
-            // 句にセット
-            if (prev_word_type == 0) {
-              // ワードを句の末尾にセット
-              ku = ku + word;
-              // ワードタイプを保存
-              prev_word_type = get_word_type(word);
-            } else {
-              // 直前のワードが助詞または切れ字
-              if (get_word_type(word) == 0) {
-                // ワードを句の末尾にセット
-                ku = ku + word;
-                // ワードタイプを保存
-                prev_word_type = 0;
-              } else {
-                // 助詞または切れ字→やり直し
-                word_index = -1;
-              }
-            }
-          }
+       // 句にセット
+       if (prev_word_type == 0) {
+         // ワードを句の末尾にセット
+         ku = ku + word;
+         // ワードタイプを保存
+         prev_word_type = get_word_type(word);
+       } else {
+         // 直前のワードが助詞または切れ字
+         if (get_word_type(word) == 0) {
+           // ワードを句の末尾にセット
+           ku = ku + word;
+           // ワードタイプを保存
+           prev_word_type = 0;
+         } else {
+           // 助詞または切れ字→やり直し
+           word_index = -1;
+         }
+       }
+     }
 
-          // 現在の文字数
-          num = num + word_index + 1;
-        }
-        return ku;
-      }
-      
-    </script>
-    <style>
-      .haiku {
-        font-family: "ヒラギノ明朝 ProN N6", "HiraMinProN-N6", "HG 明朝 E", "MS　P明朝", "MS PMincho", "MS 明朝", serif;
-        font-size: 24pt;
-        writing-mode: vertical-rl;
-        -ms-writing-mode: tb-rl;
-        -webkit-writing-mode: vertical-rl;
-        border: medium solid olive;
-        background-color: beige;
-        padding: 10px;
-        height: 280px;
-      }
-      .haiku div {padding: 10px;}
-      #naka {text-align: center;}
-      #shimo {text-align: right;}
-    </style>
-  </head>
-  <body>
-    <p>俳句自動生成</p>
-    <form action="">
-      <input type="button" value="俳句を生成する" onclick="generate()">
-    </form>
-    <hr>
-    <div class="haiku" id="ku">
-      <div id="kami">（上五）</div>
-      <div id="naka">（中七）</div>
-      <div id="shimo">（下五）</div>
-    </div>
-  </body>
+     // 現在の文字数
+     num = num + word_index + 1;
+   }
+   return ku;
+ }
+
+</script>
+<style>
+ .haiku {
+   font-family: "ヒラギノ明朝 ProN N6", "HiraMinProN-N6", "HG 明朝 E", "MS　P明朝", "MS PMincho", "MS 明朝", serif;
+   font-size: 24pt;
+   writing-mode: vertical-rl;
+   -ms-writing-mode: tb-rl;
+   -webkit-writing-mode: vertical-rl;
+   border: medium solid olive;
+   background-color: beige;
+   padding: 10px;
+   height: 280px;
+ }
+ .haiku div {padding: 10px;}
+ #naka {text-align: center;}
+ #shimo {text-align: right;}
+</style>
+</head>
+<body>
+<p>俳句自動生成</p>
+<form action="">
+<input type="button" value="俳句を生成する" onclick="generate()">
+</form>
+<hr>
+<div class="haiku" id="ku">
+<div id="kami">（上五）</div>
+<div id="naka">（中七）</div>
+<div id="shimo">（下五）</div>
+</div>
+</body>
 </html>
