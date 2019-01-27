@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>スライドショー</title>
+<script>
+// 大きな画像ファイルを配列で管理
+var imageArray = ["sample0.jpg", "sample1.jpg", "sample2.jpg",
+                  "sample3.jpg", "sample4.jpg", "sample5.jpg"];
+
+// 変数
+var currentImage = 0;    // 画像インデックス
+var timerId;
+
+// 画像を順に切り替える
+function changeImage() {
+  // 画像を表示
+  showImage(currentImage);
+  // 画像インデックスをインクリメント
+  currentImage++;
+  // 画像インデックスが画像数と一致したら先頭に戻す
+  if (currentImage == imageArray.length) currentImage = 0;
+}
+
+// スライドショーを開始
+function startSlideShow() {
+  // １回目の画像の切り替え
+  changeImage();
+  // タイマーの開始
+  timerId = setInterval("changeImage()", 6000);
+
+  // BGM開始
+  var audio = document.getElementById("audio");
+  audio.play();
+
+  // ボリュームをセット
+  audio.volume = document.getElementById("volume").value;
+
+  // 開始ボタンを無効化
+  document.getElementById("buttonStart").disabled = true;
+}
+
+// スライドショーを一時停止
+function pauseSlideShow() {
+  // タイマーの停止
+  clearInterval(timerId);
+
+  // BGMの一時停止
+  var audio = document.getElementById("audio");
+  audio.pause();
+
+  // 開始ボタンを有効化
+  document.getElementById("buttonStart").disabled = false;
+}
+
+// スライドショーを停止
+function stopSlideShow() {
+  // タイマーの停止
+  clearInterval(timerId);
+  // 画像インデックスを先頭に戻す
+  currentImage = 0;
+  // 先頭の画像を表示
+  showImage(currentImage);
+
+  // BGMの停止
+  var audio = document.getElementById("audio");
+  audio.load();
+
+  // 開始ボタンを有効化
+  document.getElementById("buttonStart").disabled = false;
+}
+
+// 画像を表示
+function showImage(imageNo) {
+  // メイン画像の切り替え
+  document.getElementById("main").src = imageArray[imageNo];
+
+  // 全てのサムネイル画像要素の取得
+  var thumbImages = document.getElementsByClassName("thumb");
+
+  // selectクラスを削除
+  for (var i=0; i<thumbImages.length; i++) {
+    thumbImages[i].classList.remove("select");
+  }
+
+  // 選択されたサムネイル画像要素にselectクラスを追加
+  thumbImages[imageNo].classList.add("select");
+}
+
+// ボリュームの変更
+function changeVolume() {
+  // ボリュームをセット
+  var audio = document.getElementById("audio");
+  audio.volume = document.getElementById("volume").value;
+}
+</script>
+<style>
+#main {
+  border: solid #999999 1px;
+  width: 640px;
+  height: 480px;
+}
+#thumbArea {
+  border: solid #999999 1px;
+  width: 620px;
+  padding: 10px;
+}
+.thumb {
+  width: 90px;
+  height: 90px;
+  border: solid #CCCCCC 2px;
+  opacity: 0.6;
+}
+.select {
+  border: solid #333366 2px;
+  opacity: 1.0;
+}
+#buttons {
+  background: #CCCCCC;
+  border: solid #999999 1px;
+  width: 620px;
+  padding: 10px;
+}
+</style>
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+</head>
+<body>
+<p>スライドショー</p>
+<hr>
+<img src="sample0.jpg" id="main">
+<div id="thumbArea">
+<img src="sample0_s.jpg" class="thumb select" onclick="showImage(0)">
+<img src="sample1_s.jpg" class="thumb" onclick="showImage(1)">
+<img src="sample2_s.jpg" class="thumb" onclick="showImage(2)">
+<img src="sample3_s.jpg" class="thumb" onclick="showImage(3)">
+<img src="sample4_s.jpg" class="thumb" onclick="showImage(4)">
+<img src="sample5_s.jpg" class="thumb" onclick="showImage(5)">
+</div>
+<div id="buttons">
+<button type="button" id="buttonStart" onclick="startSlideShow()">
+<!-- <img alt="" src="start.png"> -->
+<p><i class="fas fa-play"></i></p>
+</button>
+<button type="button" id="buttonPause" onclick="pauseSlideShow()">
+<!-- <img alt="" src="pause.png"> -->
+<p><i class="fas fa-pause"></i></p>
+</button>
+<button type="button" id="buttonStop" onclick="stopSlideShow()">
+<!-- <img alt="" src="stop.png"> -->
+<p><i class="fas fa-stop"></i></p>
+</button>
+Volume [0.0-1.0]:
+<input type="range" id="volume" min="0" max="1" step="0.1" value="1.0" onChange="changeVolume()">
+</div>
+<audio id="audio" loop>
+<source src="sample.mp3">
+<source src="sample.ogg">
+</audio>
+</body>
+</html>
