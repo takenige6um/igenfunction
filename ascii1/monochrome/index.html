@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>モノクロ加工</title>
+<script>
+var canvas, context;
+var img = new Image();
+
+function initCanvas() {
+  // キャンバスの取得
+  canvas = document.getElementById("monochrome");
+  context = canvas.getContext("2d");
+  // ラジオボタン、スライダーの無効化
+  document.getElementById("reset").disabled = true;
+  document.getElementById("set1").disabled = true;
+  document.getElementById("set2").disabled = true;
+  document.getElementById("red").disabled = true;
+  document.getElementById("green").disabled = true;
+  document.getElementById("blue").disabled = true;
+}
+
+function loadPicture(e) {
+  // 選択したファイルのURLを作成
+  var fileurl = URL.createObjectURL(e.files[0]);
+  img.src = fileurl;
+
+  // 画像読み込み後キャンバスに表示
+  img.onload = function() {
+    // ラジオボタン、スライダーの有効化
+    document.getElementById("reset").disabled = false;
+    document.getElementById("set1").disabled = false;
+    document.getElementById("set2").disabled = false;
+    document.getElementById("red").disabled = false;
+    document.getElementById("green").disabled = false;
+    document.getElementById("blue").disabled = false;
+
+    // サイズを合わせる
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    // 描画
+    draw();
+  }
+}
+
+// 画像の表示、モノクロ変換
+function draw() {
+  // 画像を描画
+  context.drawImage(img, 0, 0);
+
+  // 画像データを取得
+  var imageData = context.getImageData(0, 0, img.width, img.height);
+
+  // 選択されたラジオボタンを取得（０：元画像　１：RGB平均　２：輝度計算）
+  var monoTypeList = document.getElementsByName("monoType");
+  var monoType = 0;
+  for(var i=0; i<monoTypeList.length; i++) {
+    if (monoTypeList[i].checked) {
+      monoType = monoTypeList[i].value;
+      break;
+    }
+  }
+
+  // スライダーからRGBの各倍率を取得
+  var red = document.getElementById("red").value;
+  var green = document.getElementById("green").value;
+  var blue = document.getElementById("blue").value;
+
+  // 画像データを走査 (length=widthxheightx4)
+  for (var i=0; i<imageData.data.length; i+=4) {
+    // ピクセルデータ（RGBA）を取得
+    var r = imageData.data[i];
+    var g = imageData.data[i+1];
+    var b = imageData.data[i+2];
+    var a = imageData.data[i+3];
+
+    if (monoType > 0) {
+      // モノクロに変換
+      var monoData;
+      if (monoType == 1) {
+        // RGB平均
+        monoData = (r + g + b) / 3;
+      } else if (monoType == 2) {
+        // 輝度計算（NTSC加重平均法）
+        monoData = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+
+      // ピクセルの色を変更（透明度は変更なし）
+      imageData.data[i] = monoData * (red/255);
+      imageData.data[i+1] = monoData * (green/255);
+      imageData.data[i+2] = monoData * (blue/255);
+      imageData.data[i+3] = a;
+    }
+  }
+
+  // 加工後の画像を描画
+  context.putImageData(imageData, 0, 0);
+}
+</script>
+<style>
+canvas {
+  width: 640px;
+  height: 480px;
+  border: thin solid #CCCCCC;
+}
+form {
+  padding: 10px;
+  line-height: 150%;
+  width: 620px;
+  background: #CCCCCC;
+}
+[type=range] {
+  width: 180px;
+}
+</style>
+</head>
+<body onload="initCanvas()">
+<p>モノクロ加工</p>
+<hr>
+<canvas id="monochrome"></canvas>
+<form>
+画像ファイルを選択：
+<input type="file" accept="image/jpg, image/png" onchange="loadPicture(this);">
+<br><br>
+<input type="radio" id="reset" name="monoType" value="0" onchange="draw()" checked>元画像
+<input type="radio" id="set1" name="monoType" value="1" onchange="draw()" checked>モノクロ加工（RGB 平均）
+<input type="radio" id="set2" name="monoType" value="2" onchange="draw()" checked>モノクロ加工（輝度計算）
+<br>
+R:<input type="range" id="red" value="255" min="0" max="255" onchange="draw()">
+G:<input type="range" id="green" value="255" min="0" max="255" onchange="draw()">
+B:<input type="range" id="blue" value="255" min="0" max="255" onchange="draw()">
+</form>
+</body>
+</html>
