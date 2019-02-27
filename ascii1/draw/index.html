@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>らくがき</title>
+<script>
+var canvas, context;
+var canvasRect;                       // キャンバスの絶対座標
+var penX, penY, penColor, penWidth;   // ペン（位置、色、太さ）
+var mouseDown;
+var color = new Array();              // パレットに配置する色の配列
+var colorIndex = 0;                   // 選択されている色のインデックス
+
+function initCanvas() {
+  // キャンバスの取得
+  canvas = document.getElementById("drawCanvas");
+  context = canvas.getContext("2d");
+
+  // キャンバスの絶対座標を取得
+  canvasRect = canvas.getBoundingClientRect();
+
+  // ベース色配置
+  var colorBase = ["00", "33", "66", "99", "CC", "FF"];
+  // パレットを作成
+  var palette = document.getElementById("palette");
+  var cnt = 0;
+  for (var r=0; r<colorBase.length; r++) {
+    for (var g=0; g<colorBase.length; g++) {
+      for (var b=0; b<colorBase.length; b++) {
+        // 色の配列に色データを格納
+        color[cnt] = "#"+colorBase[r]+colorBase[g]+colorBase[b];
+
+        // 色要素を作成（ID,onclickイベント、背景色をセット）
+        var colorElement = document.createElement("span");
+        colorElement.id = "palette"+cnt;
+        colorElement.onclick = setColor;
+        colorElement.style.backgroundColor = color[cnt];
+
+        // パレットに色要素を追加
+        palette.appendChild(colorElement);
+        cnt++;
+
+        // 36個ごとに改行（回り込み解除）を入れる
+        if (cnt%36==0) {
+          var clearElement = document.createElement("div");
+          palette.appendChild(clearElement);
+        }
+      }
+    }
+  }
+
+  // ペン（色、太さ）を初期化
+  penColor = color[colorIndex];
+  penWidth = document.getElementById("penWidth").value;
+
+  // 選択した色にスタイルselectをセット
+  document.getElementById("palette"+colorIndex).classList.add("select")
+}
+
+function startDraw(event) {
+  // マウスボタンが押された
+  mouseDown = true;
+
+  // 始点をセット
+  penX = event.clientX - canvasRect.left;
+  penY = event.clientY - canvasRect.top;
+}
+
+function draw(event) {
+  // マウスボタンが押されている時描画
+  if (mouseDown) {
+    // ペンをセット（色、太さ、形状）
+    context.strokeStyle = penColor;
+    context.lineWidth = penWidth;
+    context.lineCap = "round";  // 線の端の形　round＝丸、square＝四角
+
+    // 描画
+    context.beginPath();
+    // ペンの開始位置
+    context.moveTo(penX, penY);
+    // ドラッグ位置まで線を引く
+    penX = event.clientX - canvasRect.left;
+    penY = event.clientY - canvasRect.top;
+    context.lineTo(penX, penY);
+    context.stroke();
+  }
+}
+
+function endDraw(event) {
+  // マウスボタンが放された
+  mouseDown = false;
+}
+
+function setColor(event) {
+  // 選択した色のID（７文字目以降の文字列）を取得
+  var index = event.target.id.substr(7);
+  // 選択した色にスタイルselectをセット
+  document.getElementById("palette"+colorIndex).classList.remove("select");
+  document.getElementById("palette"+index).classList.add("select");
+
+  // ペンの色を変更
+  colorIndex = index;
+  penColor = color[colorIndex];
+  document.getElementById("textColor").innerText = penColor;
+}
+
+function setWidth() {
+  // ペンの太さを変更
+  penWidth = document.getElementById("penWidth").value;
+}
+
+function clearImage() {
+  // キャンバスをクリア
+  context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function saveImage() {
+  // ファイル名の入力ダイアログを表示
+  var filename = window.prompt("ファイル名を入力してください", "image.png");
+
+  // 画像をPNG形式で保存（ダウンロード）
+  if (filename !=null) {
+    if (canvas.msToBlob) {
+      // IE（msToBlobを使用できるブラウザ）
+      var blob = canvas.msToBlob();
+      window.navigator.msSaveBlob(blob, filename);
+    } else {
+      // IE以外のブラウザ
+      var a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+</script>
+<style>
+#drawCanvas {
+  cursor: default;
+  border: thin solid #CCCCCC;
+}
+form {
+  padding: 10px;
+  width: 620px;
+  background: #CCCCCC;
+}
+[type="range"] {width: 250px;}
+#palette span {
+  width: 15px;
+  height: 15px;
+  border: thin solid lightgray;
+  float: left;
+}
+#palette div {clear: both;}
+.select {border: thin solid black !important;}
+</style>
+</head>
+<body onload="initCanvas()">
+<p>らくがき</p>
+<hr>
+<canvas id="drawCanvas" width="640" height="480" onMouseDown="startDraw(event)"
+        onMouseMove="draw(event)" onMouseUp="endDraw(event)" onMouseLeave="endDraw(event)"></canvas>
+<form>
+ペンの色：<span id="textColor">#000000</span><br>
+<div id="palette"></div>
+<br>
+ペンの太さ：
+<input type="range" id="penWidth" value="10" min="1" max="30" onChange="setWidth()">
+<input type="button" id="reset" value="らくがきを消す" onClick="clearImage()">
+<input type="button" id="save" value="らくがきを保存する" onClick="saveImage()">
+</form>
+</body>
+</html>

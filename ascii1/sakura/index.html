@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,body {
+  height: 100%;
+}
+body {
+  perspective:1000px;
+}
+sakura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+sakura:before,
+sakura:after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 30px;
+  border-radius: 100%;
+  background: #faa;
+  box-shadow: 0 0 2px 2px #faa;
+  transform-origin: 50% 100%;
+  transform: rotate(15deg);
+}
+sakura:after {
+  transform:rotate(-15deg);
+}
+</style>
+</head>
+<body>
+<script>
+function mksakura() {
+  requestAnimationFrame(mksakura);
+  var sakura = document.createElement('sakura');
+  sakura.style.left = Math.random() * window.innerWidth + 'px';
+  sakura.style.top = Math.random() * window.innerHeight + 'px';
+  var rx = Math.random()*360;
+  var ry = Math.random()*360;
+  var rz = Math.random()*360;
+  sakura.animate ([
+    /* {transform: 'rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) rotateZ(' + rz + 'deg) translate3d(0, 0, 0)', opacity: 0}, */
+    {transform: `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) translate3d(0, 0, 0)`, opacity: 0},
+    {transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg) translate3d(0, 0, 1000px)', opacity: 1},
+  ], {
+    duration: 10000,
+    // direction: 'alternate',
+    // iterations: Infinity,
+    fill: 'both',
+    // }).addEventListener('finish', (event) => {
+    //   document.body.removeChild(sakura);
+  });
+  document.body.appendChild(sakura);
+}
+mksakura();
+
+document.body.animate([
+  {background: '#000'},
+  {background: '#fdd'},
+], {
+  duration: 10000,
+  direction: 'alternate',
+  iterations: Infinity,
+  fill: 'both',
+});
+</script>
+</body>
+</html>
