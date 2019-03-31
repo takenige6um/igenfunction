@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>トリミング</title>
+<script>
+var baseCanvas, baseContext;
+var drawCanvas, drawContext;
+var trimCanvas, trimContext;
+var drawCanvasRect;
+var img = new Image();
+var startX, startY, endX, endY;
+var mouseDown;
+var dashOffset = 0;
+var timer = null;
+
+function initCanvas() {
+  // キャンバスの取得
+  baseCanvas = document.getElementById("baseCanvas");
+  baseContext = baseCanvas.getContext("2d");
+  drawCanvas = document.getElementById("drawCanvas");
+  drawContext = drawCanvas.getContext("2d");
+  trimCanvas = document.getElementById("trimCanvas");
+  trimContext = trimCanvas.getContext("2d");
+
+  // 描画キャンバスの絶対座標を取得
+  drawCanvasRect = drawCanvas.getBoundingClientRect();
+}
+
+function loadPicture(e) {
+  // 選択したファイルのURLを作成
+  var fileurl = URL.createObjectURL(e.files[0]);
+  img.src = fileurl;
+
+  // 画像読み込み後にキャンバスに表示
+  img.onload = function() {
+    // 元画像キャンバスのスタイルシートサイズに合わせる
+    baseCanvas.width = img.width;
+    baseCanvas.height = img.height;
+    // 画像を描画
+    baseContext.drawImage(img, 0, 0);
+  }
+}
+
+function startTrim(event) {
+  // マウスボタンが押された
+  mouseDown = true;
+
+  // タイマー停止、描画キャンバスをクリア
+  clearInterval(timer);
+  drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+  // 始点をセット
+  startX = event.clientX - drawCanvasRect.left;
+  startY = event.clientY - drawCanvasRect.top;
+}
+
+function drawTrim(event) {
+  // マウスボタンが押されている時トリミング範囲を描画
+  if (mouseDown) {
+    // 終点をセット
+    endX = event.clientX - drawCanvasRect.left;
+    endY = event.clientY - drawCanvasRect.top;
+
+    // トリミング範囲（四角形）を描画
+    drawRect();
+    timer = null;
+  }
+}
+
+function drawRect() {
+  // 描画キャンバスをクリア
+  drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+  // 白点線、黒点線の四角形を描画
+  for (var i=0; i<2; i++) {
+    if (i==0) {
+      drawContext.lineDashOffset = dashOffset;
+      drawContext.strokeStyle = "white";
+    } else {
+      drawContext.lineDashOffset = dashOffset+4;
+      drawContext.strokeStyle = "black";
+    }
+    // 点線の四角形
+    drawContext.beginPath();
+    drawContext.setLineDash([4, 4]);
+    drawContext.rect(startX, startY, endX-startX, endY-startY);
+    drawContext.stroke();
+  }
+
+  // 点線のオフセットを更新
+  dashOffset++;
+  if (dashOffset>7) dashOffset=0;
+}
+
+function endTrim(event) {
+  // マウスボタンが放された
+  mouseDown = false;
+
+  // トリミング範囲（点線）のアニメーション
+  if (timer==null) timer = setInterval(drawRect, 30);
+}
+
+function trimImage() {
+  // トリミング始点
+  var trimX = startX;
+  var trimY = startY;
+  // 値の小さい座標を始点に変更
+  if (endX < startX) trimX = endX;
+  if (endY < startY) trimY = endY;
+
+  // トリミングサイズ
+  var trimWidth = Math.abs(endX-startX);
+  var trimHeight = Math.abs(endY-startY);
+
+  // 元画像の縮尺率（６４０x４８０固定）
+  var dw = img.width/640;
+  var dh = img.height/480;
+
+  // 縮尺変更
+  trimX = Math.round(trimX * dw);
+  trimY = Math.round(trimY * dh);
+  trimWidth = Math.round(trimWidth * dw);
+  trimHeight = Math.round(trimHeight * dh);
+
+  // トリミング画像キャンバスのサイズを変更
+  trimCanvas.width = trimWidth;
+  trimCanvas.height = trimHeight;
+
+  // 画像をトリミングして描画
+  trimContext.drawImage(img, trimX, trimY, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+
+  // トリミング画像サイズを表示
+  document.getElementById("trimData").innerHTML = "size: "+trimWidth+"*"+trimHeight+"px";
+}
+
+function clearImage() {
+  // トリミング画像キャンバスをクリア
+  trimContext.clearRect(0, 0, trimCanvas.width, trimCanvas.height);
+}
+
+function saveImage() {
+  // トリミング画像を名前をつけて保存（ダウンロード）
+  var filename = window.prompt("ファイル名を入力してください", "image.png");
+  if (filename != null) {
+    if (trimCanvas.msToBlob) {
+      // IE(msToBlobを使用できるブラウザ)
+      var blob = trimCanvas.msToBlob();
+      window.navigator.msSaveBlob(blob, filename);
+    } else {
+      // IE以外のブラウザ
+      var a = document.createElement('a');
+      a.href = trimCanvas.toDataURL("image/png");
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+</script>
+<style>
+#wrapper {position: relative;}
+#baseCanvas {
+  width: 640px;
+  height: 480px;
+  border: thin solid #CCCCCC;
+  z-index: 0
+}
+#drawCanvas {
+  cursor: default;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 1
+}
+#trimArea {
+  position: absolute;
+  top: 0px;
+  left: 660px;
+}
+#trimCanvas {border: thin solid #CCCCCC;}
+form {
+  padding: 10px;
+  text-align: center;
+  width: 620px;
+  background: #CCCCCC;
+}
+</style>
+</head>
+<body onload="initCanvas()">
+<p>トリミング</p>
+<hr>
+<div id="wrapper">
+<canvas id="baseCanvas"></canvas>
+<canvas id="drawCanvas" width="640" height="480" onMouseDown="startTrim(event)"
+        onMouseMove="drawTrim(event)" onMouseUp="endTrim(event)"></canvas>
+<div id="trimArea">
+<canvas id="trimCanvas"></canvas>
+<div id="trimData">size: ---</div>
+</div>
+</div>
+<form action="">
+画像ファイルを選択：
+<input type="file" accept="image/jpeg, image/png" onChange="loadPicture(this)">
+<br><br>
+<input type="button" id="reset" value="トリミング" onClick="trimImage()">
+<input type="button" id="set" value="トリミングした画像を消す" onClick="clearImage()">
+<input type="button" id="save" value="トリミングした画像を保存する" onClick="saveImage()">
+</form>
+</body>
+</html>

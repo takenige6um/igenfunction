@@ -4,168 +4,168 @@
 <meta charset="utf-8">
 <title>ジグソーパズル</title>
 <script>
-  var image = new Image();
-  var width, height, size;   // ピースの枚数、大きさ
-  var status = "ready";      // ステータス (ready/start)
+var image = new Image();
+var width, height, size;   // ピースの枚数、大きさ
+var status = "ready";      // ステータス (ready/start)
 
-  function setPieces() {
-    // サイズを取得
-    if (document.getElementById("size_4x3").checked) {
-      width = 4;
-      height = 3;
-      size = 120;
-    } else if (document.getElementById("size_8x6").checked) {
-      width = 8;
-      height = 6;
-      size = 60;
-    } else {
-      width = 12;
-      height = 9;
-      size = 40;
-    }
-    // イメージエリアのサイズをセット
-    var imageArea = document.getElementById("imageArea");
-    imageArea.style.width = width*(size+2) + "px";
-    imageArea.style.height = height*(size+2) + "px";
-    // マスとピースの作成
-    imageArea.innerHTML = "";
-    document.getElementById("pieceArea").innerHTML = "";
-    for (var i=0; i<width*height; i++) {
-      // マスの作成
-      var masu = document.createElement("div");
-      masu.id = "masu_"+i;
-      masu.style.width = size + "px";
-      masu.style.height = size + "px";
-      masu.ondragover = dragOverPiece;
-      masu.ondrop = dropPiece;
-      // ピースの作成
-      var piece = document.createElement("button");
-      piece.id = "piece_"+i;
-      piece.style.width = size + "px";
-      piece.style.height = size + "px";
-      piece.draggable = true;
-      piece.ondragstart = dragPiece;
-      // マスにピースをセット
-      masu.appendChild(piece);
-      // イメージエリアにマスをセット
-      imageArea.appendChild(masu);
-    }
-    // 画像を読み込んでいれば画像を再セット
-    if (image.src != "") setImage();
+function setPieces() {
+  // サイズを取得
+  if (document.getElementById("size_4x3").checked) {
+    width = 4;
+    height = 3;
+    size = 120;
+  } else if (document.getElementById("size_8x6").checked) {
+    width = 8;
+    height = 6;
+    size = 60;
+  } else {
+    width = 12;
+    height = 9;
+    size = 40;
   }
-
-  function loadImage(e) {
-    // 画像の読み込み
-    image.src = URL.createObjectURL(e.files[0]);
-    image.onload = function() {
-      // 画像をセット
-      setImage();
-    };
+  // イメージエリアのサイズをセット
+  var imageArea = document.getElementById("imageArea");
+  imageArea.style.width = width*(size+2) + "px";
+  imageArea.style.height = height*(size+2) + "px";
+  // マスとピースの作成
+  imageArea.innerHTML = "";
+  document.getElementById("pieceArea").innerHTML = "";
+  for (var i=0; i<width*height; i++) {
+    // マスの作成
+    var masu = document.createElement("div");
+    masu.id = "masu_"+i;
+    masu.style.width = size + "px";
+    masu.style.height = size + "px";
+    masu.ondragover = dragOverPiece;
+    masu.ondrop = dropPiece;
+    // ピースの作成
+    var piece = document.createElement("button");
+    piece.id = "piece_"+i;
+    piece.style.width = size + "px";
+    piece.style.height = size + "px";
+    piece.draggable = true;
+    piece.ondragstart = dragPiece;
+    // マスにピースをセット
+    masu.appendChild(piece);
+    // イメージエリアにマスをセット
+    imageArea.appendChild(masu);
   }
+  // 画像を読み込んでいれば画像を再セット
+  if (image.src != "") setImage();
+}
 
-  function setImage() {
-    // ピースに画像をセット
-    var x = 0, y = 0;
-    for (var i=0; i<width*height; i++) {
-      var piece = document.getElementById("piece_"+i);
-      piece.style.backgroundImage = "url("+image.src+")";
-      piece.style.backgroundSize = "480px 360px";
-      piece.style.backgroundPosition = (-size*x)+"px "+(-size*y)+"px";
-      // x,yを更新
-      x++;
-      if (x == width) {
-        x = 0;
-        y++;
-      }
+function loadImage(e) {
+  // 画像の読み込み
+  image.src = URL.createObjectURL(e.files[0]);
+  image.onload = function() {
+    // 画像をセット
+    setImage();
+  };
+}
+
+function setImage() {
+  // ピースに画像をセット
+  var x = 0, y = 0;
+  for (var i=0; i<width*height; i++) {
+    var piece = document.getElementById("piece_"+i);
+    piece.style.backgroundImage = "url("+image.src+")";
+    piece.style.backgroundSize = "480px 360px";
+    piece.style.backgroundPosition = (-size*x)+"px "+(-size*y)+"px";
+    // x,yを更新
+    x++;
+    if (x == width) {
+      x = 0;
+      y++;
     }
   }
+}
 
-  function shufflePieces() {
-    // ピースエリアに移動
-    var pieceArea = document.getElementById("pieceArea");
-    for (var i=0; i<width*height; i++) {
-      var piece = document.getElementById("piece_"+i);
-      pieceArea.appendChild(piece);
-    }
-    // ピースをシャッフル
-    for (var i=width*height-1; i>0; i--) {
-      var j = Math.floor(Math.random()*i);
-      var piece_i = document.getElementById("piece_"+i);
-      var piece_j = document.getElementById("piece_"+j);
-      var clone_i = piece_i.cloneNode(true);
-      pieceArea.insertBefore(clone_i, piece_i);
-      pieceArea.replaceChild(piece_i, piece_j);
-      pieceArea.replaceChild(piece_j, clone_i);
-    }
-    // 開始
-    status = "start";
-    document.getElementById("status").innerHTML = "スタート！";
+function shufflePieces() {
+  // ピースエリアに移動
+  var pieceArea = document.getElementById("pieceArea");
+  for (var i=0; i<width*height; i++) {
+    var piece = document.getElementById("piece_"+i);
+    pieceArea.appendChild(piece);
   }
+  // ピースをシャッフル
+  for (var i=width*height-1; i>0; i--) {
+    var j = Math.floor(Math.random()*i);
+    var piece_i = document.getElementById("piece_"+i);
+    var piece_j = document.getElementById("piece_"+j);
+    var clone_i = piece_i.cloneNode(true);
+    pieceArea.insertBefore(clone_i, piece_i);
+    pieceArea.replaceChild(piece_i, piece_j);
+    pieceArea.replaceChild(piece_j, clone_i);
+  }
+  // 開始
+  status = "start";
+  document.getElementById("status").innerHTML = "スタート！";
+}
 
-  function resetPieces() {
-    // ピースを正しいマスに戻す
-    for (var i=0; i<width*height; i++) {
-      var piece = document.getElementById("piece_"+i);
-      document.getElementById("masu_"+i).appendChild(piece);
+function resetPieces() {
+  // ピースを正しいマスに戻す
+  for (var i=0; i<width*height; i++) {
+    var piece = document.getElementById("piece_"+i);
+    document.getElementById("masu_"+i).appendChild(piece);
+  }
+  // 中止
+  document.getElementById("status").innerHTML = "";
+  status == "ready";
+}
+
+function dragPiece(event) {
+  // ドラッグしたピースのIDを格納
+  event.dataTransfer.setData("text", event.target.id);
+}
+
+function dropPiece(event) {
+  // 格納されたピースのIDを取り出す
+  var id = event.dataTransfer.getData("text");
+  // ピースの移動
+  var piece = document.getElementById(id);
+  if (event.target.tagName == "DIV") {
+    if (event.target.id == "pieceArea") {
+      event.target.appendChild(piece);
+    } else if (event.target.childNodes.length == 0) {
+      event.target.appendChild(piece);
     }
-    // 中止
-    document.getElementById("status").innerHTML = "";
+  } else {
+    if (event.target.parentElement.id == "pieceArea") {
+      event.target.parentElement.appendChild(piece);
+    }
+  }
+  // 完成チェック
+  if ((status == "start")&&(checkPieces())) {
+    document.getElementById("status").innerHTML = "完成！";
     status == "ready";
   }
+}
 
-  function dragPiece(event) {
-    // ドラッグしたピースのIDを格納
-    event.dataTransfer.setData("text", event.target.id);
-  }
+function dragOverPiece(event) {
+  // 通常のドラッグの動作をキャンセル
+  event.preventDefault();
+}
 
-  function dropPiece(event) {
-    // 格納されたピースのIDを取り出す
-    var id = event.dataTransfer.getData("text");
-    // ピースの移動
-    var piece = document.getElementById(id);
-    if (event.target.tagName == "DIV") {
-      if (event.target.id == "pieceArea") {
-        event.target.appendChild(piece);
-      } else if (event.target.childNodes.length == 0) {
-        event.target.appendChild(piece);
-      }
-    } else {
-      if (event.target.parentElement.id == "pieceArea") {
-        event.target.parentElement.appendChild(piece);
-      }
-    }
-    // 完成チェック
-    if ((status == "start")&&(checkPieces())) {
-      document.getElementById("status").innerHTML = "完成！";
-      status == "ready";
-    }
+function checkPieces() {
+  // 位置チェック
+  var check = true;
+  for (var i=0; i<width*height; i++) {
+    var id = document.getElementById("piece_"+i).parentElement.id;
+    if (id != "masu_"+i) check = false;
   }
-
-  function dragOverPiece(event) {
-    // 通常のドラッグの動作をキャンセル
-    event.preventDefault();
-  }
-
-  function checkPieces() {
-    // 位置チェック
-    var check = true;
-    for (var i=0; i<width*height; i++) {
-      var id = document.getElementById("piece_"+i).parentElement.id;
-      if (id != "masu_"+i) check = false;
-    }
-    return check;
-  }
+  return check;
+}
 </script>
 <style>
-  div {border: solid thin #CCCCCC;}
-  #pieceArea {
-    width: 720px;
-    height: 240px;
-    padding: 10px;
-    background-color: #CCFFCC;
-  }
-  #imageArea div {float: left;}
-  button {float: left;}
+div {border: solid thin #CCCCCC;}
+#pieceArea {
+  width: 720px;
+  height: 240px;
+  padding: 10px;
+  background-color: #CCFFCC;
+}
+#imageArea div {float: left;}
+button {float: left;}
 </style>
 </head>
 <body onload="setPieces()">
@@ -181,6 +181,6 @@
 <hr>
 <div id="imageArea"></div>
 <div id="pieceArea" ondragover="dragOverPiece(event)"
- ondrop="dropPiece(event)"></div>
+     ondrop="dropPiece(event)"></div>
 </body>
 </html>

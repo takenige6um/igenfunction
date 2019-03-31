@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>マウストレーニング</title>
+<script>
+var canvas, context, canvasRect;
+var sx, sy;                      // 始点
+var mouseDown = false;           // マウスボタンが押されたか
+var status = "ready"             // ステータス(ready/training/result)
+var cntShape;                    // 図形の白と黒の数
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("training");
+  context = canvas.getContext("2d");
+  canvasRect = canvas.getBoundingClientRect();
+
+  // 線の形状、太さをセット
+  context.lineCap = "round";
+  context.lineWidth = 20;
+
+  // 線の練習
+  setTraining("line");
+}
+
+function setTraining(shape) {
+  // 練習用図形の描画
+  context.fillStyle = "#000000";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#FFFFFF";
+  context.beginPath();
+  if (shape == "line") {
+    // 線の練習
+    context.moveTo(100, 250);
+    context.lineTo(700, 250);
+  } else if (shape == "triangle") {
+    // 三角形の練習
+    context.moveTo(400, 50);
+    context.lineTo(700, 450);
+    context.lineTo(100, 450);
+    context.closePath();
+  } else if (shape == "rect") {
+    // 四角形の練習
+    context.rect(100, 50, 600, 400);
+  } else if (shape == "circle") {
+    // 円の練習
+    context.arc(400, 250, 200, 0, 2*Math.PI);
+  }
+  context.stroke();
+
+  // 初期化
+  status = "ready";
+  document.getElementById("score").innerText = "------";
+  document.getElementById("comment").innerText = "";
+
+  // 白と黒の数を取得
+  cntShape = countColor();
+}
+
+function startDraw(event) {
+  // マウスボタンが押された
+  mouseDown = true;
+
+  // トレーニング開始
+  if (status == "ready") status = "training";
+
+  // 始点をセット
+  sx = event.clientX - canvasRect.left;
+  sy = event.clientY - canvasRect.top;
+}
+
+function draw(event) {
+  // マウスボタンが押されている時描画
+  if (mouseDown && (status == "training")) {
+    // 終点をセット
+    var ex = event.clientX - canvasRect.left;
+    var ey = event.clientY - canvasRect.top;
+
+    // 描画
+    context.strokeStyle = "#FF0000";
+    context.beginPath();
+    context.moveTo(sx, sy);
+    context.lineTo(ex, ey);
+    context.stroke();
+
+    // 始点を変更
+    sx = ex;
+    sy = ey;
+  }
+}
+
+function endDraw(event) {
+  // マウスボタンが放された
+  mouseDown = false;
+
+  // トレーニング終了
+  if (status == "training") {
+    // スコア
+    var cntDraw = countColor();
+    var cntIn = cntShape.white - cntDraw.white;
+    var cntOut = cntShape.black - cntDraw.black;
+    var score = (cntIn - cntOut/2)/cntShape.white*100;
+    if (score < 0) score = 0;
+    document.getElementById("score").innerText = score.toFixed(2);
+
+    // 評価
+    var comment;
+    if (score > 90) {
+      comment = "Excellent!";
+    } else if (score >80) {
+      comment = "Great!";
+    } else if (score >70) {
+      comment = "Very Good!";
+    } else if (score >50) {
+      comment = "Good!";
+    } else if (score >30) {
+      comment = "Fair";
+    } else if (score >10) {
+      comment = "Poor";
+    } else {
+      comment = "Bad!!";
+    }
+    document.getElementById("comment").innerText = comment;
+
+    // ステータスを変更
+    status = "result";
+  }
+}
+
+function countColor() {
+  // 画像データを走査
+  var white = 0, black = 0;
+  var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  for (var i=0; i<imageData.data.length; i+=4) {
+    var r = imageData.data[i];
+    var g = imageData.data[i+1];
+    var b = imageData.data[i+2];
+    // 白と黒の点をカウント
+    if ((r == 255)&&(g == 255)&&(b == 255)) white++;
+    if ((r == 0)&&(g == 0)&&(b == 0)) black++;
+  }
+
+  // 白と黒の数を返す
+  return {"white":white, "black":black};
+}
+</script>
+<style>
+#comment {color: #FF0000;}
+</style>
+</head>
+<body onload="init()">
+<p>マウストレーニング</p>
+<input type="button" value="線の練習" onclick="setTraining('line')">
+<input type="button" value="三角形の練習" onclick="setTraining('triangle')">
+<input type="button" value="四角形の練習" onclick="setTraining('rect')">
+<input type="button" value="円の練習" onclick="setTraining('circle')">
+<hr>
+白い線をドラッグでなぞってください。マウスボタンを放すと終了します。<br>
+評価：<span id="score">-----</span>% <span id="comment"></span>
+<hr>
+<canvas id="training" width="800" height="500"
+        onmousedown="startDraw(event)" onmousemove="draw(event)"
+        onmouseup="endDraw(event)" onmouseleave="endDraw(event)"></canvas>
+</body>
+</html>
