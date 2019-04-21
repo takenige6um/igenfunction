@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>スクラッチアート</title>
+<script>
+var canvasColor, contextColor;    // 下地用キャンバス
+var canvasBlack, contextBlack;    // スクラッチ用キャンバス
+var sx, sy;                       // 始点
+var mouseDown = false;            // マウスボタンが押されたか
+
+function init() {
+  // キャンバスの取得
+  canvasColor = document.getElementById("color");
+  contextColor = canvasColor.getContext("2d");
+  canvasBlack = document.getElementById("black");
+  contextBlack = canvasBlack.getContext("2d");
+  canvasRect = canvasBlack.getBoundingClientRect();
+
+  // 下地用キャンバスの塗りつぶし
+  fillColor();
+  // スクラッチ用キャンバスの塗りつぶし
+  fillBlack();
+}
+
+function startDraw(event) {
+  // マウスボタンが押された
+  mouseDown = true;
+
+  // 始点をセット
+  sx = event.clientX - canvasRect.left;
+  sy = event.clientY - canvasRect.top;
+}
+
+function draw(event) {
+  // マウスボタンが押されている時描画
+  if (mouseDown) {
+    // 終点をセット
+    var ex, ey;
+    // マウス
+    ex = event.clientX - canvasRect.left;
+    ey = event.clientY - canvasRect.top;
+
+    // スクラッチ
+    contextBlack.globalCompositeOperation = "destination-out";
+    contextBlack.lineCap = "round";
+    contextBlack.lineWidth = document.getElementById("pen").value;
+    contextBlack.beginPath();
+    contextBlack.moveTo(sx, sy);
+    contextBlack.lineTo(ex, ey);
+    contextBlack.stroke();
+
+    // 始点を変更
+    sx = ex;
+    sy = ey;
+  }
+}
+
+function endDraw(event) {
+  // マウスボタンが放された
+  mouseDown = false;
+}
+
+function fillColor() {
+  // グラデーションの作成
+  var w = canvasColor.width, h = canvasColor.height;
+  var grad = contextColor.createRadialGradient(w/2, h/2, 20, w/2, h/2, w/2);
+  if (document.getElementById("linear1").checked) {
+    // 線形：縦
+    grad = contextColor.createLinearGradient(0, 0, 0, h);
+  } else if (document.getElementById("linear2").checked) {
+    // 線形：横
+    grad = contextColor.createLinearGradient(0, 0, w, 0);
+  }
+  // グラデーション色をセット
+  for (var i=0; i<10; i++) {
+    grad.addColorStop(i/10, "hsl("+i*36+", 100%, 50%)");
+  }
+
+  // 塗りつぶし（グラデーション）
+  contextColor.fillStyle = grad;
+  contextColor.fillRect(0, 0, canvasColor.width, canvasColor.height);
+}
+
+function fillBlack() {
+  // 塗りつぶし（黒）
+  contextBlack.globalCompositeOperation = "source-over";
+  contextBlack.fillStyle = "#000000";
+  contextBlack.fillRect(0, 0, canvasBlack.width, canvasBlack.height);
+}
+
+function saveArt() {
+  // スクラッチ用キャンバスの画像化
+  var imageBlack = new Image();
+  imageBlack.src = canvasBlack.toDataURL();
+  imageBlack.onload = function() {
+    // 下地用キャンバスにスクラッチ用キャンバスの画像を描画
+    contextColor.drawImage(imageBlack, 0, 0);
+    // 名前をつけて保存（ダウンロード）
+    var message = "ファイル名を入力してください";
+    var filename = window.prompt(message, "art.png");
+    if (filename != null) {
+      if (canvasColor.msToBlob) {
+        // msToBlobを使用できるブラウザ
+        var blob = canvasColor.msToBlob();
+        window.navigator.msSaveBlob(blob, filename);
+      } else {
+        // それ以外のブラウザ
+        var a = document.createElement("a");
+        a.href = canvasColor.toDataURL("image/png");
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      // 下地用キャンバスを元に戻す
+      fillColor();
+    }
+  };
+}
+</script>
+<style>
+div {position: relative;}
+#black {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+</style>
+</head>
+<body onload="init()">
+<p>スクラッチアート</p>
+<input type="button" value="新規作成" onclick="fillBlack()">
+<input type="button" value="保存" onclick="saveArt()">
+<hr>
+ペンの太さ：<input type="range" id="pen" value="1" min="1" max="10">
+<input type="radio" name="color" id="radial" onclick="fillColor()" checked>円形
+<input type="radio" name="color" id="linear1" onclick="fillColor()">線形（縦）
+<input type="radio" name="color" id="linear2" onclick="fillColor()">線形（横）
+<hr>
+<div>
+<canvas id="color" width="800" height="600"></canvas>
+<canvas id="black" width="800" height="600"
+ onmousedown="startDraw(event)" onmousemove="draw(event)"
+ onmouseup="endDraw(event)" onmouseleave="endDraw(event)"></canvas>
+</div>
+</body>
+</html>
