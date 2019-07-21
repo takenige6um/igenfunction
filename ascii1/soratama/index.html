@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>宙玉風加工</title>
+<script>
+var canvas, context;
+var image = new Image();
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("image");
+  context = canvas.getContext("2d");
+}
+
+function loadImage(e) {
+  // 画像の読み込み
+  image.src = URL.createObjectURL(e.files[0]);
+  image.onload = function() {
+    // 描画
+    drawSoratama();
+  };
+}
+
+function drawRotateImage(w, h) {
+  // 180°回転して描画
+  context.save();
+  context.translate(w/2, h/2);
+  context.rotate(Math.PI);
+  context.drawImage(image, -1/2 * w, -1/2 * h, w, h);
+  context.restore();
+}
+
+function drawSoratama() {
+  // キャンバスサイズの変更(600x450→600x600)
+  canvas.width = 600;
+  canvas.height = 600;
+
+  // 加工用画像を描画（６００x６００、１８０°回転）
+  drawRotateImage(canvas.width, canvas.height);
+  // 加工用画像データを取得
+  var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+  // キャンバスサイズの変更（６００x６００→６００x４５０）
+  canvas.width = 600;
+  canvas.height = 450;
+
+  // 背景画像を描画（６００x４５０、１８０°回転、フィルター：ブラー１０px）
+  context.filter = "blur(10px)";
+  drawRotateImage(canvas.width, canvas.height);
+  // 背景画像データを取得
+  var newImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+  // 魚眼レンズ加工（等距離射影：d' = f x θ）
+  var f = 80, r = 0, g = 0, b = 0;
+  var cx = canvas.width/2, cy = canvas.height/2;
+  for (var y=0; y<imageData.height; y++) {
+    for (var x=0; x<imageData.width; x++) {
+      // インデックス
+      index = (y * imageData.width + x) * 4;
+
+      // 中心からの距離
+      var dx = x - cx;
+      var dy = y - cy;
+      var d = Math.sqrt(Math.pow(dx, 2)+Math.pow(dy, 2));
+      // 投影先の座標
+      var tx = cx - Math.floor(dx/d * f * Math.atan(d/f));
+      var ty = cy - Math.floor(dy/d * f * Math.atan(d/f));
+
+      // 投影先のインデックス
+      var tIndex = (ty * imageData.width + tx) * 4;
+
+      // 画像データを加工
+      newImageData.data[tIndex] = imageData.data[index];
+      newImageData.data[tIndex+1] = imageData.data[index+1];
+      newImageData.data[tIndex+2] = imageData.data[index+2];
+      newImageData.data[tIndex+3] = imageData.data[index+3];
+
+      // 色データを加算
+      r += imageData.data[index];
+      g += imageData.data[index+1];
+      b += imageData.data[index+2];
+    }
+  }
+  // 色データの平均値を取得
+  r = Math.floor(r/(imageData.width*imageData.height));
+  g = Math.floor(g/(imageData.width*imageData.height));
+  b = Math.floor(b/(imageData.width*imageData.height));
+
+  // 加工後の画像を描画
+  context.putImageData(newImageData, 0, 0);
+
+  // 透明球の描画
+  var grad = context.createRadialGradient(cx, cy, 60, cx, cy, 115);
+  grad.addColorStop(0, "rgba(0, 0, 0, 0)");
+  grad.addColorStop(0.6, "rgba("+r+", "+g+", "+b+", 0.3)");
+  grad.addColorStop(0.9, "rgba(200, 200, 200, 0.5)");
+  grad.addColorStop(1.0, "rgba("+r+", "+g+", "+b+", 0.7)");
+  context.fillStyle = grad;
+  context.filter = "none";
+  context.beginPath();
+  context.arc(cx, cy, 115, 0, Math.PI*2);
+  context.fill();
+
+  // 光の描画
+  var angle = Math.random() * Math.PI * 2;
+  var lx = cx + 110 * Math.cos(angle);
+  var ly = cy + 110 * Math.sin(angle);
+  grad = context.createRadialGradient(lx, ly, 1, lx, ly, 10);
+  grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+  grad.addColorStop(0.6, "rgba(255, 255, 255, 0.4)");
+  grad.addColorStop(1.0, "rgba(255, 255, 255, 0)");
+  context.fillStyle = grad;
+  context.filter = "blur(2px)";
+  context.beginPath();
+  context.arc(lx, ly, 10, 0, Math.PI*2);
+  context.fill();
+}
+
+function saveImage() {
+  // 画像を名前をつけて保存（ダウンロード）
+  var filename = window.prompt("ファイル名を入力してください", "image.png");
+  if (filename != null) {
+    if (canvas.msToBlob) {
+      // msToBlobを使用できるブラウザ
+      var blob = canvas.msToBlob();
+      window.navigator.msSaveBlob(blob, filename);
+    } else {
+      // それ以外のブラウザ
+      var a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+</script>
+<style>
+canvas {border: thin solid #CCCCCC;}
+</style>
+</head>
+<body onload="init()">
+<p>宙玉風加工</p>
+画像ファイル：
+<input type="file" accept="image/*" onChange="loadImage(this)">
+<input type="button" value="画像を保存する" onclick="saveImage()">
+<hr>
+<canvas id="image" width="600" height="450"></canvas>
+</body>
+</html>

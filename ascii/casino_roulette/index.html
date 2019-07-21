@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ルーレット</title>
+<script>
+var canvas, context, canvasRect;
+var speed, friction, rotateAngle = 0;  // 回転速度、摩擦、回転角
+var ballPos = 0, medal = 50;
+var timer, cnt;
+// ルーレット（３８区分：１〜３６、０、００）
+var number = ["00", 27, 10, 25, 29, 12, 8, 19, 31, 18, 6, 21, 33, 16, 4, 23, 35, 14, 2,
+              0, 28, 9, 26, 30, 11, 7, 20, 32, 17, 5, 22, 34, 15, 3, 24, 36, 13, 1];
+var color = new Array();
+
+function init() {
+  // キャンバスの取得
+  canvas = document.getElementById("roulette");
+  context = canvas.getContext("2d");
+  // 数字に対応する色をセット
+  for (var i=0; i<number.length; i++) {
+    if (i%2 == 0) color[i] = "black";
+    if (i%2 == 1) color[i] = "red";
+    if ((i == 0)||(i == 19)) color[i] = "green";
+  }
+  // ルーレットの描画
+  draw();
+  // 数字用ベットエリアの作成
+  for (var n=1; n<=36; n++) {
+    if (n%3 == 1) var tr = document.createElement("tr");
+    var num = document.createElement("td");
+    num.innerText = n;
+    num.className = color[number.indexOf(n)];
+    tr.appendChild(num);
+    var bet = document.createElement("td");
+    var input = document.createElement("input");
+    input.type = "number";
+    input.id = "bet_" + n;
+    input.value = 0;
+    input.min = 0;
+    bet.appendChild(input);
+    tr.appendChild(bet);
+    if (n%3 == 0) document.getElementById("betArea").appendChild(tr);
+  }
+}
+
+function draw() {
+  // ルーレットの描画
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.lineWidth = 2;
+  drawCircle(320, 320, 320, "goldenrod", null);
+  context.strokeStyle = "white";
+  var angle = Math.PI*2/number.length;
+  for (var i=0; i<number.length; i++) {
+    context.save();
+    context.translate(320, 320);
+    context.rotate(i*angle + rotateAngle);
+    // 扇形
+    context.fillStyle = color[i];
+    context.beginPath();
+    context.moveTo(0, 0);
+    context.arc(0, 0, 300, angle*(-1/2)-Math.PI/2, angle*(1/2)-Math.PI/2);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    // 数字
+    context.fillStyle = "white";
+    context.font = "bold 30px serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(number[i], 0, -280);
+    context.restore();
+  }
+  drawCircle(320, 320, 260, null, "white");
+  drawCircle(320, 320, 220, "darkgoldenrod", "white");
+  // 玉の描画
+  var x = 320 + 240 * Math.cos(rotateAngle + ballPos*angle - Math.PI/2);
+  var y = 320 + 240 * Math.sin(rotateAngle + ballPos*angle - Math.PI/2);
+  drawCircle(x, y, 15, "white", null);
+}
+
+function drawCircle(x, y, r, fillColor, strokeColor) {
+  // 円の描画
+  context.beginPath();
+  context.arc(x, y, r, 0, Math.PI*2);
+  context.fillStyle = fillColor;
+  if (fillColor != null) context.fill();
+  context.strokeStyle = strokeColor;
+  if (strokeColor != null) context.stroke();
+}
+
+function rotate() {
+  // ルーレットの回転
+  cnt++;
+  if (cnt > 70) friction = 0.005;
+  speed -= friction;
+  rotateAngle += speed;
+  if (friction == 0) ballPos = Math.floor(Math.random() * number.length);
+  draw();
+  // 回転停止
+  if (speed < 0) {
+    clearInterval(timer);
+    var bet1 = 0, bet2 = 0;
+    if (color[ballPos] != "green") {
+      bet1 = document.getElementById("bet_"+color[ballPos]).value;
+      bet2 = document.getElementById("bet_"+number[ballPos]).value;
+    }
+    var text1 = color[ballPos] + ": " + bet1 + "x2 = " + bet1*2;
+    var text2 = number[ballPos] + ": " + bet2 + "x36 = " + bet2*36;
+    document.getElementById("result_color").innerText = text1;
+    document.getElementById("result_number").innerText = text2;
+    document.getElementById("total").innerText = bet1*2 + bet2*36;
+    medal += bet1*2 + bet2*36;
+    document.getElementById("medal").innerText = medal;
+    document.getElementById("start").disabled = false;
+  }
+}
+
+function startRoulette() {
+  // ベット
+  var bets = document.getElementsByTagName("input");
+  var bet_total = 0;
+  for (var i=0; i<bets.length; i++) {
+    if (bets[i].type == "number") bet_total += Number(bets[i].value);
+  }
+  document.getElementById("bet").innerText = bet_total;
+  if (medal >= bet_total) {
+    medal -= bet_total;
+    document.getElementById("medal").innerText = medal;
+    // 回転開始
+    cnt = 0;
+    speed = 0.4;
+    friction = 0;
+    document.getElementById("start").disabled = true;
+    timer = setInterval(rotate, 30);
+  }
+}
+</script>
+<style>
+#rouletteArea {
+  position: relative;
+  float: left;
+  margin-right: 10px;
+}
+#result {
+  position: absolute;
+  top: 260px;
+  left: 170px;
+  width: 300px;
+  text-align: center;
+  font-size: 24px;
+}
+#result_total {border-top: 2px solid black;}
+input[type="number"] {width: 50px;}
+.red {background: red;}
+.black {background: black;}
+table {width: 300px;}
+td {
+  color: white;
+  background: green;
+  padding: 5px;
+}
+</style>
+</head>
+<body onload="init()">
+<p>ルーレット</p>
+<input type="button" id="start" value="BET &amp; START" onclick="startRoulette()">
+Medal: <span id="medal">50</span> Bet: <span id="bet">0</span>
+<hr>
+<div id="rouletteArea">
+<canvas id="roulette" width="640" height="640"></canvas>
+<div id="result">
+<div id="result_color">Red or Black: x2</div>
+<div id="result_number">Number: x36</div>
+<div id="result_total">Total: <span id="total">----</span></div>
+</div>
+</div>
+<table><tr>
+<td class="red">Red</td>
+<td><input type="number" id="bet_red" value="0" min="0"></td>
+<td class="black">Black</td>
+<td><input type="number" id="bet_black" value="0" min="0"></td>
+</tr></table>
+<table id="betArea"></table>
+</body>
+</html>
