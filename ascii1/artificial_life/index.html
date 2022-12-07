@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>人工生命</title>
+<script>
+let canvas,context;
+let particles = new Array();
+let num;                     // パーティクル数
+// ルール
+let rule = new Array();
+const sampleRule = [
+  [[6,3,3,3],[-6,6,-6,-3],[6,-6,6,-6],[-6,-6,-6,6]],
+  [[7,-5,3,-7],[3,5,-7,-3],[-7,-3,-3,-7],[-7,3,-3,3]],
+  [[10,5,-5,-10],[-10,10,5,-5],[-5,-10,10,5],[0,-1,-10,10]]
+];
+
+const init = () => {
+  // キャンバスの取得
+  canvas = document.getElementById("world");
+  context = canvas.getContext("2d");
+  // スライダーの作成
+  for (let i=0; i<4; i++) {
+    for (let j=0; j<4; j++) {
+      const slider = document.createElement("div");
+      const sLabel = document.createElement("span");
+      sLabel.innerText = `→${j+1} `;
+      slider.appendChild(sLabel);
+      const range = document.createElement("input");
+      range.type = "range";
+      range.id = `g_${i}_${j}`;
+      [range.min,range.max] = [-10,10];
+      slider.appendChild(range);
+      const sValue = document.createElement("span");
+      sValue.id = `v_${i}_${j}`;
+      slider.appendChild(sValue);
+      document.getElementById(`slider_${i}`).appendChild(slider);
+    }
+  }
+  // サンプル１を実行
+  setRule(2)
+  update();
+}
+
+const initParticles = () => {
+  // パーティクルの初期化
+  num = document.getElementById("num").value;
+  particles = [];
+  for (let i=0; i<4; i++) {
+    for (let j=0; j<num; j++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      particles.push({x:x,y:y,vx:0,vy:0,id:i});
+    }
+  }
+}
+
+const setRule = n => {
+  // ルールをセット
+  rule = [];
+  for (let i=0; i<4; i++) {
+    document.getElementById(`off_${i}`).checked = false;
+    document.getElementById(`color_${i}`).disabled = false;
+    rule[i] = new Array(4);
+    for (let j=0; j<4; j++) {
+      if (n == 0) rule[i][j] = 0;
+      if (n == 1) rule[i][j] = Math.floor(Math.random()*20 - 10);
+      if (n >= 2) rule[i][j] = sampleRule[n-2][i][j];
+      document.getElementById(`g_${i}_${j}`).disabled = false;
+      document.getElementById(`g_${i}_${j}`).value = rule[i][j];
+      document.getElementById(`v_${i}_${j}`).innerText = rule[i][j];
+    }
+  }
+  initParticles();
+}
+
+const changeRule = () => {
+  // ルールの変更
+  for (let i=0; i<4; i++) {
+    const off_i = document.getElementById(`off_${i}`).checked;
+    document.getElementById(`color_${i}`).disabled = off_i;
+    for (let j=0; j<4; j++) {
+      rule[i][j] = document.getElementById(`g_${i}_${j}`).value;
+      const off_j = document.getElementById(`off_${j}`).checked;
+      if (off_i||off_j) rule[i][j] = 0;
+      document.getElementById(`g_${i}_${j}`).disabled = off_i||off_j;
+      document.getElementById(`v_${i}_${j}`).innerText = rule[i][j];
+    }
+  }
+}
+
+const update = () => {
+  // 移動
+  for (let i=0; i<particles.length; i++) {
+    let [fx,fy] = [0,0];
+    const p1 = particles[i];
+    for (let j=0; j<particles.length; j++) {
+      const p2 = particles[j];
+      const [dx,dy] = [p1.x - p2.x,p1.y - p2.y];
+      const d = (dx**2 + dy**2)**0.5;
+      if ((d > 0)&&(d < 50)) {
+        const g = rule[p1.id][p2.id];
+        const f = (g/10) / d;
+        fx += f * dx;
+        fy += f * dy;
+      }
+    }
+    p1.vx = (p1.vx + fx) * 0.4;
+    p1.vy = (p1.vy + fy) * 0.4;
+    p1.x += p1.vx;
+    p1.y += p1.vy;
+    if (p1.x < 0) p1.x = canvas.width;
+    if (p1.x > canvas.width) p1.x = 0;
+    if (p1.y < 0) p1.y = canvas.height;
+    if (p1.y > canvas.height) p1.y = 0;
+  }
+  // 描画
+  context.fillStyle = "rgba(0,0,0,0.6)";
+  context.fillRect(0,0,canvas.width,canvas.height);
+  for (let i=0; i<4; i++) {
+    if (document.getElementById(`off_${i}`).checked) continue;
+    context.strokeStyle = document.getElementById(`color_${i}`).value;
+    for (j=i*num; j<(i+1)*num; j++) {
+      context.beginPath();
+      context.arc(particles[j].x,particles[j].y,2,0,Math.PI*2);
+      context.stroke();
+    }
+  }
+  window.requestAnimationFrame(update);
+}
+</script>
+<style>
+input[type="number"] {width: 50px;}
+canvas {
+  float: left;
+  margin-right: 10px;
+}
+form {margin-top: 10px;}
+</style>
+</head>
+<body onload="init()">
+<p>人工生命</p>
+パーティクル数 : <input type="number" id="num" value="400" min="0" step="10">
+<input type="button" value="変更" onclick="initParticles()">
+<hr>
+<canvas id="world" width="600" height="600"></canvas>
+<input type="button" value="リセット" onclick="setRule(0)">
+<input type="button" value="ランダム" onclick="setRule(1)"><br>
+<input type="button" value="サンプル１" onclick="setRule(2)">
+<input type="button" value="サンプル２" onclick="setRule(3)">
+<input type="button" value="サンプル３" onclick="setRule(4)">
+<form id="form" oninput="changeRule()">
+[1] <input type="color" id="color_0" value="#FFFF33">
+<input type="checkbox" id="off_0">無効
+<div id="slider_0"></div>
+[2] <input type="color" id="color_1" value="#FF33FF">
+<input type="checkbox" id="off_1">無効
+<div id="slider_1"></div>
+[3] <input type="color" id="color_2" value="#33FFCC">
+<input type="checkbox" id="off_2">無効
+<div id="slider_2"></div>
+[4] <input type="color" id="color_3" value="#3366FF">
+<input type="checkbox" id="off_3">無効
+<div id="slider_3"></div>
+</form>
+</body>
+</html>
