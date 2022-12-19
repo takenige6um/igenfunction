@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>モーションキャプチャ</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+<script>
+let model;                  // PoseNet モデル
+let canvas,context,video;   // キャンバス、ビデオ
+let poses = new Array();    // ポーズ
+let images = new Array();   // キャプチャ画像
+let sources = new Array();  // キャプチャ画像ソース
+let sTime = 0,eTime = 0;    // 開始位置、終了位置
+let index = 0,timer;        // インデックス、タイマー
+// 接続ポイント
+const body = [[5,6],[5,11],[6,12],[11,12],       // 体
+              [5,7],[7,9],[6,8],[8,10],          // 手
+              [11,13],[13,15],[12,14],[14,16]];  // 足
+
+const init = async () => {
+  // PoseNetモデルの読み込み
+  model = await posenet.load();
+  // キャンバス、ビデオ要素の取得
+  canvas = document.getElementById("image");
+  context = canvas.getContext("2d");
+  video = document.getElementById("video");
+  // ボタンの無効化
+  document.getElementById("capButton").disabled = true;
+  document.getElementById("playButton").disabled = true;
+}
+
+const loadVideo = files => {
+  // 動画の読み込み
+  video.src = URL.createObjectURL(files[0]);
+  video.onloadedmetadata = () => {
+    canvas.width = 270 * video.videoWidth/video.videoHeight;
+    let maxTime = video.duration;
+    if (!isFinite(maxTime)) maxTime = 10;
+    document.getElementById("time").max = maxTime;
+    document.getElementById("time_0").max = maxTime;
+    document.getElementById("time_1").max = maxTime;
+    document.getElementById("message").innerText = "";
+  }
+  // 再生位置を表示
+  video.ontimeupdate = () => {
+    const sec = video.currentTime;
+    document.getElementById("time").value = video.currentTime;
+    document.getElementById("sec").innerText = sec.toFixed(1);
+  }
+}
+
+const setRange = n => {
+  // 位置を取得
+  const time = document.getElementById(`time_${n}`).value;
+  document.getElementById(`sec_${n}`).innerText = time;
+  video.currentTime = time;
+  // 再生区間をセット
+  sTime = Number(document.getElementById("time_0").value);
+  eTime = Number(document.getElementById("time_1").value);
+  if (sTime > eTime) [sTime,eTime] = [eTime,sTime];
+  document.getElementById("sSec").innerText = sTime;
+  document.getElementById("eSec").innerText = eTime;
+  // 「キャプチャ」ボタンの無効化
+  document.getElementById("capButton").disabled = false;
+  if (sTime == eTime) {
+    document.getElementById("capButton").disabled = true;
+  }
+  document.getElementById("message").innerText = "";
+}
+
+const startCapture = () => {
+  // キャプチャ開始
+  [poses,images,sources] = [[],[],[]];
+  video.currentTime = sTime;
+  video.play();
+  timer = setInterval(capture,100);
+  document.getElementById("capButton").disabled = true;
+  document.getElementById("playButton").disabled = true;
+  document.getElementById("message").innerText = "キャプチャ中...";
+  document.getElementById("progress").value = 0;
+}
+
+const capture = () => {
+  // 動画のキャプチャ
+  if (video.currentTime < eTime) {
+    context.drawImage(video,0,0,canvas.width,canvas.height);
+    sources.push(canvas.toDataURL());
+  } else {
+    // キャプチャ終了
+    clearInterval(timer);
+    video.pause();
+    // ポーズを検出
+    index = 0;
+    document.getElementById("progress").max = sources.length;
+    document.getElementById("message").innerText = "モーション検出中...";
+    detect();
+  }
+}
+
+const detect = async () => {
+  // キャプチャした画像の読み込み
+  const image = new Image();
+  image.src = sources[index];
+  image.onload = async () => {
+    // ポーズを検出
+    const pose = await model.estimateMultiplePoses(image);
+    poses.push(pose);
+    images.push(image);
+    index++;
+    document.getElementById("progress").value = index;
+    if (index < sources.length) {
+      detect();
+    } else {
+      // 検出完了
+      document.getElementById("capButton").disabled = false;
+      document.getElementById("playButton").disabled = false;
+      document.getElementById("message").innerText += "完了";
+    }
+  }
+}
+
+const play = () => {
+  // 再生
+  index = 0;
+  timer = setInterval(drawPose,100);
+}
+
+const drawPose = () => {
+  // 画像をキャンバスに描画
+  context.drawImage(images[index],0,0);
+  for (const pose of poses[index]) {
+    // ポーズの描画
+    for (const parts of body) {
+      const x1 = pose.keypoints[parts[0]].position.x;
+      const y1 = pose.keypoints[parts[0]].position.y;
+      const x2 = pose.keypoints[parts[1]].position.x;
+      const y2 = pose.keypoints[parts[1]].position.y;
+      context.strokeStyle = "#00FF00";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(x1,y1);
+      context.lineTo(x2,y2);
+      context.stroke();
+    }
+  }
+  index++;
+  if (index == images.length) clearInterval(timer);
+}
+</script>
+<style>
+#message {color: #009900;}
+.border {border: thin solid #CCCCCC;}
+input[type="range"] {
+  margin: 0px;
+  width: 480px;
+}
+#timer {width: 480px;}
+</style>
+</head>
+<body onload="init()">
+<p>モーションキャプチャ</p>
+<input type="file" accept="video/*" onchange="loadVideo(this.files)">
+<input type="button" id="capButton" value="キャプチャ" onclick="startCapture()">
+<progress id="progress" value="0" min="0"></progress>
+<input type="button" id="playButton" value="モーションを再生" onclick="play()">
+<span id="message"></span>
+<hr>
+<video id="video" class="border" width="480" height="270" muted></video>
+<canvas id="image" class="border" width="480" height="270"></canvas>
+<br>
+<progress id="time" value="0" min="0" max="10" step="0.1"></progress>
+[<span id="sec">0</span>s]<br>
+再生区間：<span id="sSec">0</span>s~<span id="eSec">0</span>s<br>
+<input type="range" id="time_0" value="0" step="0.1" onchange="setRange(0)">
+[<span id="sec_0">0</span>s]<br>
+<input type="range" id="time_1" value="0" step="0.1" onchange="setRange(1)">
+[<span id="sec_1">0</span>s]
+</body>
+</html>
