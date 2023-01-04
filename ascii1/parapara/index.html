@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>パラパラマンガメーカー</title>
+<script src="LZWEncoder.js"></script>
+<script src="NeuQuant.js"></script>
+<script src="GIFEncoder.js"></script>
+<script>
+let canvas = new Array(),context = new Array();
+let frame = new Array(),index;
+let status,timer;
+let sx,sy,mouseDown = false;
+const [width,height] = [600,600];
+
+const init = () => {
+  // キャンバスの取得
+  for (let i=0; i<2; i++) {
+    canvas[i] = document.getElementById(`canvas_${i}`);
+    context[i] = canvas[i].getContext("2d");
+    [canvas[i].width,canvas[i].height] = [width,height];
+    [context[i].lineWidth,context[i].lineCap] = [5,"round"];
+  }
+  context[0].strokeStyle = "#99CC99";
+  context[1].fillStyle = "#FFFFFF";
+  // マウスイベントの登録
+  canvas[1].addEventListener("mousedown",event => {
+    // 始点を取得
+    [sx,sy] = getPosition(event);
+    mouseDown = true;
+  });
+  canvas[1].addEventListener("mousemove",event => {
+    if ((mouseDown)&&(status == "draw")) {
+      // 線を描画
+      const [ex,ey] = getPosition(event);
+      const color = document.getElementById("color").value;
+      frame[index].push([sx,sy,ex,ey,color]);
+      [sx,sy] = [ex,ey];
+      draw(1,index);
+    }
+  });
+  canvas[1].addEventListener("mouseup",() => mouseDown = false);
+  canvas[1].addEventListener("mouseleave",() => mouseDown = false);
+  // 初期化
+  initManga()
+}
+
+const initManga = () => {
+  // 初期化
+  frame = [[]];
+  [index,status] = [0,"draw"];
+  context[0].clearRect(0,0,width,height);
+  context[1].clearRect(0,0,width,height);
+  document.getElementById("frame").innerText = "1/1";
+}
+
+const getPosition = event => {
+  // マウスカーソルの位置を取得
+  const canvasRect = event.target.getBoundingClientRect();
+  return [event.clientX-canvasRect.left,event.clientY-canvasRect.top];
+}
+
+const draw = (i,n) => {
+  // 描画
+  context[i].clearRect(0,0,width,height);
+  if (status == "play") context[1].fillRect(0,0,width,height);
+  for (const data of frame[n]) {
+    if (i == 1) context[i].strokeStyle = data[4];
+    context[i].beginPath();
+    context[i].moveTo(data[0],data[1]);
+    context[i].lineTo(data[2],data[3]);
+    context[i].stroke();
+  }
+  document.getElementById("frame").innerText = `${index+1}/${frame.length}`;
+}
+
+const addFrame = () => {
+  // フレームを追加
+  if (status == "draw") {
+    frame.splice(index+1,0,new Array());
+    nextFrame();
+  }
+}
+
+const clearFrame = () => {
+  // フレームをクリア
+  if (status == "draw") {
+    context[1].clearRect(0,0,width,height);
+    frame[index] = [];
+  }
+}
+
+const nextFrame = () => {
+  // 次のフレームを表示
+  if ((status == "draw")&&(index < frame.length-1)) {
+    draw(0,index);
+    index++;
+    draw(1,index);
+  }
+}
+
+const prevFrame = () => {
+  // 前のフレームを表示
+  if ((status == "draw")&&(index > 0)) {
+    index--;
+    context[0].clearRect(0,0,width,height);
+    if (index > 0) draw(0,index-1);
+    draw(1,index);
+  }
+}
+
+const startPlayManga = () => {
+  // 再生開始
+  [index,status] = [0,"play"];
+  context[0].clearRect(0,0,width,height);
+  timer = setInterval(playManga,document.getElementById("interval").value);
+}
+
+const playManga = () => {
+  // 再生
+  draw(1,index);
+  index++;
+  if (index == frame.length) {
+    // 再生終了
+    clearInterval(timer);
+    status ="draw";
+    prevFrame();
+  }
+}
+
+const saveGIF = () => {
+  // エンコード＋保存（ダウンロード）
+  const encoder = new GIFEncoder();
+  encoder.setDelay(document.getElementById("interval").value);
+  if (document.getElementById("loop").checked) encoder.setRepeat(0);
+  encoder.start();
+  status = "play";
+  for (let i=0; i<frame.length; i++) {
+    draw(1,i);
+    encoder.addFrame(context[1]);
+  }
+  encoder.finish();
+  const filename = window.prompt("ファイル名を入力してください","manga.gif");
+  if (filename != null) encoder.downroad(filename);
+  [index,status] = [frame.length,"draw"];
+  prevFrame();
+}
+</script>
+<style>
+input[type="number"] {width: 50px;}
+div {position: relative;}
+canvas {
+  position: absolute;
+  border: thin solid #009900;
+}
+#canvas_0 {
+  background-image: radial-gradient(#99CC99 1px,#FFFFFF 1px);
+  background-size: 10px 10px;
+}
+</style>
+</head>
+<body onload="init()">
+<p>パラパラマンガメーカー</p>
+<input type="button" value="新規作成" onclick="initManga()">
+<input type="number" id="interval" value="100" min="0" max="1000">ms
+<input type="button" value="再生" onclick="startPlayManga()">
+<input type="button" value="出力" onclick="saveGIF()">
+<input type="checkbox" id="loop">ループ<hr>
+<input type="color" id="color" >
+<input type="button" value="←" onclick="prevFrame()">
+<span id="frame">1/1</span>
+<input type="button" value="→" onclick="nextFrame()">
+<input type="button" value="追加" onclick="addFrame()">
+<input type="button" value="クリア" onclick="clearFrame()">
+<div>
+<canvas id="canvas_0"></canvas>
+<canvas id="canvas_1"></canvas>
+</div>
+</body>
+</html>
