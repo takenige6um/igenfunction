@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>3D花火</title>
+<script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
+<script>
+let scene,camera,renderer;
+let canvas,context;
+let texture,oha,ova;            // テクスチャー、直前のカメラ角度
+const fireworks = new Array();  // 花火
+const plane = new THREE.Plane();  // 交差用平面
+const num = 250,speed = 0.2;      // パーティクル数、初速
+
+// パーティクルクラス
+class Particle {
+  constructor(pos) {
+    // 打ち上げ設定
+    this.p = pos.clone();
+    this.v = new THREE.Vector3(0,0.5,0);
+    this.a = new THREE.Vector3(0,-0.001,0);
+    this.lifetime = 150;
+    this.status = "launch";
+  }
+  explode() {
+    // 爆発設定
+    this.v = new THREE.Vector3().random().addScalar(-1/2);
+    this.v.normalize().multiplyScalar((Math.random()/5+1) * speed);
+    this.lifetime = 150;
+    this.status = "explode";
+  }
+  update() {
+    // 更新
+    this.v.add(this.a);
+    this.p.add(this.v);
+    this.lifetime--;
+  }
+}
+
+const init = () => {
+  // シーン、カメラ、レンダラー
+  const [width,height] = [window.innerWidth - 20,window.innerHeight - 120];
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(65,width/height,0.01,500);
+  renderer = new THREE.WebGLRenderer({antialias: true,alpha: true});
+  renderer.setSize(width,height);
+  document.getElementById("renderArea").appendChild(renderer.domElement);
+  // 軌跡描画用キャンバスの取得、サイズ変更
+  canvas = document.getElementById("trail");
+  context = canvas.getContext("2d");
+  [canvas.width,canvas.height] = [width,height];
+  // テクスチャを作成
+  const textureCanvas = document.createElement("canvas");
+  const textureContext = textureCanvas.getContext("2d");
+  [textureCanvas.width,textureCanvas.height] = [64,64];
+  const grad = textureContext.createRadialGradient(32,32,0,32,32,32);
+  grad.addColorStop(0,"rgba(255,255,255,1)");
+  grad.addColorStop(1,"rgba(255,255,255,0)");
+  textureContext.fillStyle = grad;
+  textureContext.beginPath();
+  textureContext.arc(32,32,32,0,Math.PI*2);
+  textureContext.fill();
+  texture = new THREE.Texture(textureCanvas);
+  texture.needsUpdate = true;
+  // マウスイベントの登録（花火の追加）
+  renderer.domElement.addEventListener("click",event => {
+    addFirework(getIntersectPosition(event));
+  });
+  update();
+}
+
+const addFirework = pos => {
+  // 花火の作成
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(num * 3);
+  const particles = new Array();
+  for (let i=0; i<num; i++) {
+    particles.push(new Particle(pos));
+    positions[i*3] = pos.x;
+    positions[i*3+1] = pos.y;
+    positions[i*3+2] = pos.z;
+  }
+  geometry.setAttribute("position",new THREE.BufferAttribute(positions,3));
+  const hue = Math.floor(Math.random() * 360);
+  const material = new THREE.PointsMaterial({
+    size: 1, transparent: true, opacity: 1, depthTest: false,
+    color: new THREE.Color(`hsl(${hue},100%,75%)`), map: texture
+  });
+  const object = new THREE.Points(geometry,material);
+  scene.add(object);
+  fireworks.push({object:object,particles:particles,hue:hue});
+}
+
+const update = () => {
+  // 花火の描画
+  for (const firework of fireworks) {
+    const pos = firework.object.geometry.attributes.position;
+    for (let i=0; i<firework.particles.length; i++) {
+      firework.particles[i].update();
+      pos.array[i*3] = firework.particles[i].p.x;
+      pos.array[i*3+1] = firework.particles[i].p.y;
+      pos.array[i*3+2] = firework.particles[i].p.z;
+      if (firework.particles[i].lifetime < 0) {
+        if (firework.particles[i].status == "launch") {
+          firework.particles[i].explode();
+        } else {
+          firework.particles[i].status = "dead";
+        }
+      }
+    }
+    firework.object.geometry.attributes.position.needsUpdate = true;
+    firework.object.material.opacity = firework.particles[0].lifetime/150;
+    const hue = firework.hue + (150 - firework.particles[0].lifetime)*2;
+    const color = new THREE.Color(`hsl(${hue%360},100%,75%)`);
+    firework.object.material.color.set(color);
+  }
+  // 花火の追加
+  if ((Math.random() < 0.1)&&(fireworks.length < 10)) {
+    const pos = new THREE.Vector3().random().addScalar(-1/2);
+    pos.multiplyScalar(60);
+    addFirework(pos);
+  }
+  // 花火の削除
+  for (let i=fireworks.length-1; i>=0; i--) {
+    if (fireworks[i].particles[0].status == "dead") {
+      fireworks[i].object.geometry.dispose();      
+      fireworks[i].object.material.dispose();
+      scene.remove(fireworks[i].object);
+      fireworks.splice(i,1);
+    }
+  }
+  // カメラ、交差用平面の向きを変更
+  const ha = document.getElementById("ha").value * Math.PI/180;
+  const va = document.getElementById("va").value * Math.PI/180;
+  const [y,r] = [120 * Math.sin(va) + 60, 120 * Math.cos(va)];
+  const [x,z] = [r * Math.cos(ha), r * Math.sin(ha)];
+  camera.position.set(x,y,z);
+  camera.lookAt(new THREE.Vector3(0,60,0));
+  plane.normal.set(x,y-60,z);
+  // レンダリング
+  renderer.render(scene,camera);
+  context.globalCompositeOperation = "source-over";
+  context.fillStyle = "#000000";
+  if ((document.getElementById("tCheck").checked)&&(ha==oha)&&(va==ova)) {
+    context.fillStyle = "rgba(0,0,0,0.05)";
+  }
+  context.fillRect(0,0,canvas.width,canvas.height);
+  context.globalCompositeOperation = "lighter";
+  context.drawImage(renderer.domElement,0,0);
+  [oha,ova] = [ha,va];
+  window.requestAnimationFrame(update);
+}
+
+const getIntersectPosition = event => {
+  // 平面と交差する座標を取得
+  const mouse = new THREE.Vector2();
+  mouse.x = event.offsetX / canvas.width * 2 - 1;
+  mouse.y = event.offsetY / canvas.height * (-2) + 1;
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse,camera);
+  const intersection = new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane,intersection);
+  return intersection;
+}
+</script>
+<style>
+canvas {position: absolute;}
+</style>
+<body onload="init()">
+<p>３D花火</p>
+水平角度：<input type="range" id="ha" value="0" min="-180" max="180" step="5"
+ oninput="out_ha.value=ha.value">[<output id="out_ha" for="ha">0</output>° ]
+垂直角度：<input type="range" id="va" value="0" min="-90" max="90" step="5"
+ oninput="out_va.value=va.value">[<output id="out_va" for="va">0</output>° ]
+<input type="checkbox" id="tCheck" checked>軌跡
+<hr>
+<div id="renderArea"><canvas id="trail"></canvas></div>
+</body>
+</html>
